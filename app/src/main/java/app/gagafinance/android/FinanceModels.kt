@@ -12,12 +12,22 @@ import java.util.TimeZone
 /** Entries are user-maintained records, NOT a wallet or bank balance. */
 enum class EntryKind { INCOME, EXPENSE }
 
+object FinanceCategories {
+    val values = listOf(
+        "Other", "Food", "Transport", "Housing", "Bills", "Shopping",
+        "Salary", "Business", "Education", "Health", "Travel"
+    )
+
+    fun valid(category: String): Boolean = category in values
+}
+
 data class FinanceEntry(
     val id: Long,
     val kind: EntryKind,
     val description: String,
     val minorUnits: Long,
-    val createdAt: Long
+    val createdAt: Long,
+    val category: String = "Other"
 )
 
 data class Cashflow(val income: Long = 0, val expenses: Long = 0) {
@@ -79,7 +89,7 @@ object FinanceCsv {
             timeZone = TimeZone.getTimeZone("UTC")
         }
         return buildString {
-            appendLine("timestamp_utc,type,description,amount_bdt")
+            appendLine("timestamp_utc,type,description,amount_bdt,category")
             for (entry in entries.sortedBy { it.createdAt }) {
                 append(time.format(Date(entry.createdAt)))
                 append(',')
@@ -88,6 +98,8 @@ object FinanceCsv {
                 append(escapeCell(entry.description))
                 append(',')
                 append(Money.amountForCsv(entry.minorUnits))
+                append(',')
+                append(escapeCell(entry.category))
                 append('\n')
             }
         }
