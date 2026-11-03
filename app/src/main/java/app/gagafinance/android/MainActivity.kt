@@ -94,6 +94,14 @@ class MainActivity : ComponentActivity() {
 }
 
 private data class Destination(val label: String, val icon: ImageVector)
+private data class FinanceSnapshot(
+    val entries: List<FinanceEntry>,
+    val people: List<LedgerPerson>,
+    val debts: List<DebtEvent>,
+    val budgets: List<MonthlyBudget>,
+    val goals: List<SavingsGoal>,
+    val savingsChanges: List<SavingsChange>
+)
 
 @Composable
 private fun GaGaFinanceApp() {
@@ -105,6 +113,15 @@ private fun GaGaFinanceApp() {
     var records by remember { mutableStateOf<List<FinanceEntry>>(emptyList()) }
     var people by remember { mutableStateOf<List<LedgerPerson>>(emptyList()) }
     var debtEvents by remember { mutableStateOf<List<DebtEvent>>(emptyList()) }
+    var budgets by remember { mutableStateOf<List<MonthlyBudget>>(emptyList()) }
+    var goals by remember { mutableStateOf<List<SavingsGoal>>(emptyList()) }
+    var savingsChanges by remember { mutableStateOf<List<SavingsChange>>(emptyList()) }
+    var plannerOpen by rememberSaveable { mutableStateOf(false) }
+    var budgetDialogOpen by remember { mutableStateOf(false) }
+    var editingBudget by remember { mutableStateOf<MonthlyBudget?>(null) }
+    var pendingBudgetDelete by remember { mutableStateOf<MonthlyBudget?>(null) }
+    var goalDialogOpen by remember { mutableStateOf(false) }
+    var changingGoal by remember { mutableStateOf<SavingsGoal?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
@@ -118,11 +135,21 @@ private fun GaGaFinanceApp() {
         scope.launch {
             try {
                 val snapshot = withContext(Dispatchers.IO) {
-                    Triple(store.listEntries(), store.listPeople(), store.listDebtEvents())
+                    FinanceSnapshot(
+                        entries = store.listEntries(),
+                        people = store.listPeople(),
+                        debts = store.listDebtEvents(),
+                        budgets = store.listBudgets(),
+                        goals = store.listSavingsGoals(),
+                        savingsChanges = store.listSavingsChanges()
+                    )
                 }
-                records = snapshot.first
-                people = snapshot.second
-                debtEvents = snapshot.third
+                records = snapshot.entries
+                people = snapshot.people
+                debtEvents = snapshot.debts
+                budgets = snapshot.budgets
+                goals = snapshot.goals
+                savingsChanges = snapshot.savingsChanges
                 loadError = null
             } catch (_: Exception) {
                 loadError = "Unable to read local records. Your existing data has not been erased."
@@ -216,8 +243,10 @@ private fun GaGaFinanceApp() {
                     action = { Button(onClick = { isLoading = true; reload() }) { Text("Retry") } }
                 )
                 selected == 0 -> HomePage(
-                    records, page, onAdd = { editingEntry = null; showAdd = true },
-                    onView = { selected = 1 }
+                    records, budgets, goals, page,
+                    onAdd = { editingEntry = null; showAdd = true },
+                    onView = { selected = 1 },
+                    onPlanning = { selected = 4; plannerOpen = true }
                 )
                 selected == 1 -> TransactionsPage(
                     records, page, onAdd = { editingEntry = null; showAdd = true },
@@ -235,12 +264,131 @@ private fun GaGaFinanceApp() {
                     "AI Advisor", "AI insights are not enabled. No personal transaction data is sent to an AI service.",
                     page
                 )
+                selected == 4 && plannerOpen -> PlanningPage(
+                    entries = records, budgets = budgets, goals = goals,
+                    changes = savingsChanges, modifier = page,
+                    onBack = { plannerOpen = false },
+                    onBudget = { editingBudget = it; budgetDialogOpen = true },
+                    onRemoveBudget = { pendingBudgetDelete = it },
+                    onNewGoal = { goalDialogOpen = true },
+                    onSavings = { changingGoal = it }
+                )
                 else -> MorePage(
                     records.size, page,
                     onExport = { exportLauncher.launch("gaga-finance-transactions.csv") },
-                    onExportPeople = { peopleExportLauncher.launch("gaga-finance-people-ledger.csv") }
+                    onExportPeople = { peopleExportLauncher.launch("gaga-finance-people-ledger.csv") },
+                    onPlanning = { plannerOpen = true }
                 )
             }
+        }
+
+        if (budgetDialogOpen) {
+            BudgetDialog(
+                existing = editingBudget, saving = isSaving,
+                onDismiss = { if (!isSaving) budgetDialogOpen = false },
+                onSave = { category, amount ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    store.upsertBudget(category, amount)
+                                }
+                                budgetDialogOpen = false
+                                editingBudget = null
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not save the budget.")
+                            } finally {
+                                isSaving = false
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        pendingBudgetDelete?.let { budget ->
+            AlertDialog(
+                onDismissRequest = { if (!isSaving) pendingBudgetDelete = null },
+                title = { Text("Remove budget?") },
+                text = { Text("This removes the spending limit, not any transactions.") },
+                confirmButton = {
+                    TextButton(enabled = !isSaving, onClick = {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    check(store.deleteBudget(budget.category))
+                                }
+                                pendingBudgetDelete = null
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not remove budget.")
+                            } finally {
+                                isSaving = false
+                            }
+                        }
+                    }) { Text("Remove") }
+                },
+                dismissButton = {
+                    TextButton(enabled = !isSaving, onClick = {
+                        pendingBudgetDelete = null
+                    }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (goalDialogOpen) {
+            GoalDialog(
+                saving = isSaving,
+                onDismiss = { if (!isSaving) goalDialogOpen = false },
+                onSave = { name, target ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    store.createSavingsGoal(name, target)
+                                }
+                                goalDialogOpen = false
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not create savings goal.")
+                            } finally {
+                                isSaving = false
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        changingGoal?.let { goal ->
+            SavingsChangeDialog(
+                goal = goal, saving = isSaving,
+                onDismiss = { if (!isSaving) changingGoal = null },
+                onSave = { kind, amount ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    store.recordSavingsChange(goal.id, kind, amount)
+                                }
+                                changingGoal = null
+                                reload()
+                            } catch (e: IllegalArgumentException) {
+                                snackbar.showSnackbar(e.message ?: "Invalid savings amount.")
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not update savings goal.")
+                            } finally {
+                                isSaving = false
+                            }
+                        }
+                    }
+                }
+            )
         }
 
         if (showAdd) {
@@ -362,8 +510,13 @@ private fun GaGaFinanceApp() {
 
 @Composable
 private fun HomePage(
-    records: List<FinanceEntry>, modifier: Modifier,
-    onAdd: () -> Unit, onView: () -> Unit
+    records: List<FinanceEntry>,
+    budgets: List<MonthlyBudget>,
+    goals: List<SavingsGoal>,
+    modifier: Modifier,
+    onAdd: () -> Unit,
+    onView: () -> Unit,
+    onPlanning: () -> Unit
 ) {
     val cashflow = FinanceMath.totals(records, FinanceMath.monthStart())
     Column(
@@ -399,6 +552,29 @@ private fun HomePage(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             MetricCard("Income", Money.formatBDT(cashflow.income), Modifier.weight(1f))
             MetricCard("Expenses", Money.formatBDT(cashflow.expenses), Modifier.weight(1f))
+        }
+        Text("Plan your money", color = White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Panel),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    budgets.size.toString() + " monthly budgets · " +
+                        goals.size.toString() + " savings goals",
+                    color = White, fontWeight = FontWeight.SemiBold
+                )
+                val overLimit = budgets.count {
+                    PlanningMath.budgetStatus(it, records).overBudget
+                }
+                if (overLimit > 0) {
+                    Text(
+                        overLimit.toString() + " category budgets exceeded this month",
+                        color = Coral, fontSize = 12.sp
+                    )
+                }
+                TextButton(onClick = onPlanning) { Text("Manage budgets & goals") }
+            }
         }
         Text("Recent activity", color = White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         if (records.isEmpty()) {
@@ -623,13 +799,15 @@ private fun AddTransactionDialog(
 @Composable
 private fun MorePage(
     count: Int, modifier: Modifier,
-    onExport: () -> Unit, onExportPeople: () -> Unit
+    onExport: () -> Unit, onExportPeople: () -> Unit,
+    onPlanning: () -> Unit
 ) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Header("More", "Data and account settings")
         Text("Your records", color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text("You have " + count + " locally recorded transactions.", color = Muted)
+        Button(onClick = onPlanning) { Text("Budgets & savings goals") }
         Button(onClick = onExport) { Text("Export transactions to CSV") }
         Button(onClick = onExportPeople) { Text("Export People Ledger to CSV") }
         Text("CSV files contain names and financial details. Store them securely.",
