@@ -1,23 +1,49 @@
-# Implementation status
+# GaGa Finance Android implementation status
 
-## Committed foundation
+Last reviewed: 2026-11-03
 
-- Native Kotlin Android application module.
-- Jetpack Compose app shell and dark navy / turquoise visual baseline.
-- Five-item bottom navigation: Home, Txn, People, AI and More.
-- Initial dashboard layout with clearly labeled sample values.
-- Gradle configuration targeting Android SDK 35 and minimum SDK 23.
+## Scope of the offline foundation (proposed PR)
 
-## Not implemented yet
+- Native Kotlin + Jetpack Compose application with five destinations.
+- Working local manual income/expense entry and permanent deletion with confirmation.
+- Exact amounts stored as integer BDT minor units, not floating-point currency.
+- SQLite app-private persistence for manual records (survives app restarts).
+- Current-month cashflow calculations from entered data.
+- CSV export through Android's system document picker, with spreadsheet-formula escaping.
+- Unit tests for parsing, cashflow and CSV export; GitHub Actions test/lint/debug APK pipeline.
+- No INTERNET permission, no financial provider SDK and no committed service credentials.
 
-- Authentication, account recovery and persistent sessions.
-- Live transaction storage, budgets, savings goals, portfolio or market data.
-- Cloud synchronization, Firebase integration or offline conflict handling.
-- AI service integration.
-- Real deposits, withdrawals, transfers, bill payment or settlement.
-- Server-authoritative double-entry ledger, idempotency, fraud controls and audit logs.
-- Automated tests, CI build verification, signing and release APK.
+This is a **personal bookkeeping prototype**, not a bank, wallet, remittance service, or investment platform. No displayed value is a bank-verified balance. The SQLite database is private to the Android app sandbox but **is not encrypted at rest**. Do not enter account credentials or other sensitive banking information. Backups are disabled and uninstalling/clearing app data can delete records permanently.
 
-## Financial safety
+## Production blockers (not implemented)
 
-The displayed zero values are placeholders. No balance or transaction in this starter app represents actual funds. Do not connect real payment rails until a trusted backend validates identity, authorizes operations, records immutable ledger entries, handles reversals and reconciles provider settlement. Payment secrets and Firebase Admin credentials must remain server-side.
+### P0 — decide the product and safeguard money
+1. Decide whether GaGa Finance is **manual personal finance** only, or a regulated custodial/payment product. Do not connect real-money functions until a compliance and partnership model is signed off.
+2. Establish threat model, data classification, encryption-at-rest strategy, secure key management and device/session security.
+3. Design backend boundaries, authentication, privacy policy, account deletion and recovery; no secret should be built into the APK.
+4. For any actual money movement: regulated provider partnership and legal assessment, verified identity as applicable, server-authoritative double-entry ledger, idempotent commands, payment reconciliation, fraud handling, refunds/reversals, audit logs, and dispute procedures.
+
+### P1 — core bookkeeping product
+5. Categories, merchants/people, search and filters, budget management, savings goals and recurring entries.
+6. Edit/undo and safe deletion of transactions, history and data portability.
+7. Database schema migrations, test fixtures, full accessibility and small-screen QA.
+8. Optional authenticated encrypted sync and backup only after privacy/security review.
+
+### P2 — optional extensions
+9. Permissioned analytics and insights; AI disabled until a suitable privacy contract and data-use controls exist.
+10. Optional investment market data only from licensed, trustworthy sources; distinguish quotes from holdings.
+11. Releases: signing material kept outside GitHub, proper Play App Signing, release minification, provenance, device testing, internal track and compliance declarations.
+
+## Verification checklist
+- [x] GitHub Actions debug assembly succeeded on main before this PR.
+- [ ] New PR build, tests and lint pass.
+- [ ] Install debug APK on multiple Android devices / Android versions.
+- [ ] Enter income, expense, invalid amount, restart app, verify exact values.
+- [ ] Export CSV and inspect contents, including formulas and escaped quotation marks.
+- [ ] Test uninstall/clear-data warnings, rotation, TalkBack and long descriptions.
+- [ ] Define Android production application ID, package ownership and release key custody.
+- [ ] Sign release AAB and review Google Play policies for the final declared product.
+- [ ] Confirm security/compliance before enabling any real money feature.
+
+## Cost posture
+Keep the offline MVP on free Android/GitHub tooling. Do not add Firebase paid services, payment processors, premium AI APIs, or SMS until the specific use case, regulatory path and recurring costs are approved.
