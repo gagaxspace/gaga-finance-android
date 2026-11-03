@@ -5,9 +5,9 @@ Last reviewed: 2026-11-03
 ## Scope of the offline foundation (proposed PR)
 
 - Native Kotlin + Jetpack Compose application with five destinations.
-- Working local manual income/expense entry and permanent deletion with confirmation.
+- Working categorized local manual income/expense entry; search and filter, in-place editing and deletion with confirmation.
 - Exact amounts stored as integer BDT minor units, not floating-point currency.
-- SQLite app-private persistence for manual records (survives app restarts).
+- SQLite app-private persistence for manual records (survives app restarts). A v1→v2 non-destructive migration adds the category field, preserving existing entries.
 - Current-month cashflow calculations from entered data.
 - CSV export through Android's system document picker, with spreadsheet-formula escaping.
 - Unit tests for parsing, cashflow and CSV export; GitHub Actions test/lint/debug APK pipeline.
@@ -24,8 +24,8 @@ This is a **personal bookkeeping prototype**, not a bank, wallet, remittance ser
 4. For any actual money movement: regulated provider partnership and legal assessment, verified identity as applicable, server-authoritative double-entry ledger, idempotent commands, payment reconciliation, fraud handling, refunds/reversals, audit logs, and dispute procedures.
 
 ### P1 — core bookkeeping product
-5. Categories, merchants/people, search and filters, budget management, savings goals and recurring entries.
-6. Edit/undo and safe deletion of transactions, history and data portability.
+5. Budget management, savings goals, merchants/people details, recurring entries and more granular search/filter options.
+6. Undo/recovery for deletion, historical date editing, and complete data portability.
 7. Database schema migrations, test fixtures, full accessibility and small-screen QA.
 8. Optional authenticated encrypted sync and backup only after privacy/security review.
 
@@ -38,7 +38,8 @@ This is a **personal bookkeeping prototype**, not a bank, wallet, remittance ser
 - [x] GitHub Actions debug assembly succeeded on main before this PR.
 - [ ] New PR build, tests and lint pass.
 - [ ] Install debug APK on multiple Android devices / Android versions.
-- [ ] Enter income, expense, invalid amount, restart app, verify exact values.
+- [ ] Enter income, expense and category, invalid amount, restart app, edit and delete; verify exact values.
+- [ ] Install v1 APK, create entries, upgrade to v2 and verify records were preserved.
 - [ ] Export CSV and inspect contents, including formulas and escaped quotation marks.
 - [ ] Test uninstall/clear-data warnings, rotation, TalkBack and long descriptions.
 - [ ] Define Android production application ID, package ownership and release key custody.
