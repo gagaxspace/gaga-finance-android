@@ -32,12 +32,19 @@ class FinanceModelsTest {
     }
 
     @Test
+    fun categoryCatalogSupportsExpectedValues() {
+        assertTrue(FinanceCategories.valid("Food"))
+        assertTrue(FinanceCategories.valid("Salary"))
+        assertTrue(!FinanceCategories.valid("Secrets"))
+    }
+
+    @Test
     fun csvNeutralizesSpreadsheetFormulasAndQuotes() {
         val csv = FinanceCsv.export(listOf(
             FinanceEntry(1, EntryKind.EXPENSE, "=1+2, \"test\"", 199L, 0L)
         ))
         assertTrue(csv.contains("\"'=1+2, \"\"test\"\"\""))
         assertTrue(csv.contains("1.99"))
-        assertTrue(csv.startsWith("timestamp_utc,type,description,amount_bdt"))
+        assertTrue(csv.startsWith("timestamp_utc,type,description,amount_bdt,category"))
     }
 }
