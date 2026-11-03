@@ -103,17 +103,26 @@ private fun GaGaFinanceApp() {
     val scope = rememberCoroutineScope()
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var records by remember { mutableStateOf<List<FinanceEntry>>(emptyList()) }
+    var people by remember { mutableStateOf<List<LedgerPerson>>(emptyList()) }
+    var debtEvents by remember { mutableStateOf<List<DebtEvent>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
     var editingEntry by remember { mutableStateOf<FinanceEntry?>(null) }
+    var showPersonAdd by remember { mutableStateOf(false) }
+    var recordingPerson by remember { mutableStateOf<LedgerPerson?>(null) }
     var pendingDelete by remember { mutableStateOf<FinanceEntry?>(null) }
     var loadError by remember { mutableStateOf<String?>(null) }
 
     fun reload() {
         scope.launch {
             try {
-                records = withContext(Dispatchers.IO) { store.listEntries() }
+                val snapshot = withContext(Dispatchers.IO) {
+                    Triple(store.listEntries(), store.listPeople(), store.listDebtEvents())
+                }
+                records = snapshot.first
+                people = snapshot.second
+                debtEvents = snapshot.third
                 loadError = null
             } catch (_: Exception) {
                 loadError = "Unable to read local records. Your existing data has not been erased."
@@ -192,9 +201,12 @@ private fun GaGaFinanceApp() {
                     onEdit = { editingEntry = it; showAdd = true },
                     onDelete = { pendingDelete = it }
                 )
-                selected == 2 -> FeatureNotice(
-                    "People", "Contacts and transfers are not connected. No money can be sent from this app.",
-                    page
+                selected == 2 -> PeopleLedgerPage(
+                    people = people,
+                    events = debtEvents,
+                    modifier = page,
+                    onAddPerson = { showPersonAdd = true },
+                    onRecord = { recordingPerson = it }
                 )
                 selected == 3 -> FeatureNotice(
                     "AI Advisor", "AI insights are not enabled. No personal transaction data is sent to an AI service.",
@@ -232,6 +244,58 @@ private fun GaGaFinanceApp() {
                                 reload()
                             } catch (_: Exception) {
                                 snackbar.showSnackbar("Could not save the transaction.")
+                            } finally {
+                                isSaving = false
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showPersonAdd) {
+            AddLedgerPersonDialog(
+                saving = isSaving,
+                onDismiss = { if (!isSaving) showPersonAdd = false },
+                onSave = { name, note ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { store.addPerson(name, note) }
+                                showPersonAdd = false
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not save the person.")
+                            } finally {
+                                isSaving = false
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        recordingPerson?.let { person ->
+            RecordDebtDialog(
+                person = person,
+                events = debtEvents.filter { it.personId == person.id },
+                saving = isSaving,
+                onDismiss = { if (!isSaving) recordingPerson = null },
+                onSave = { kind, minorUnits, note ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    store.addDebtEvent(person.id, kind, minorUnits, note)
+                                }
+                                recordingPerson = null
+                                reload()
+                            } catch (e: IllegalArgumentException) {
+                                snackbar.showSnackbar(e.message ?: "Invalid ledger amount.")
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not record ledger activity.")
                             } finally {
                                 isSaving = false
                             }
