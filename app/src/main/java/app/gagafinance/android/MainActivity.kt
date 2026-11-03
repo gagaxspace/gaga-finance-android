@@ -33,6 +33,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -104,6 +106,7 @@ private fun GaGaFinanceApp() {
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
+    var editingEntry by remember { mutableStateOf<FinanceEntry?>(null) }
     var pendingDelete by remember { mutableStateOf<FinanceEntry?>(null) }
     var loadError by remember { mutableStateOf<String?>(null) }
 
@@ -181,11 +184,12 @@ private fun GaGaFinanceApp() {
                     action = { Button(onClick = { isLoading = true; reload() }) { Text("Retry") } }
                 )
                 selected == 0 -> HomePage(
-                    records, page, onAdd = { showAdd = true },
+                    records, page, onAdd = { editingEntry = null; showAdd = true },
                     onView = { selected = 1 }
                 )
                 selected == 1 -> TransactionsPage(
-                    records, page, onAdd = { showAdd = true },
+                    records, page, onAdd = { editingEntry = null; showAdd = true },
+                    onEdit = { editingEntry = it; showAdd = true },
                     onDelete = { pendingDelete = it }
                 )
                 selected == 2 -> FeatureNotice(
@@ -205,17 +209,26 @@ private fun GaGaFinanceApp() {
 
         if (showAdd) {
             AddTransactionDialog(
+                existing = editingEntry,
                 saving = isSaving,
                 onDismiss = { if (!isSaving) showAdd = false },
-                onSave = { kind, description, minorUnits ->
+                onSave = { kind, description, minorUnits, category ->
                     if (!isSaving) {
                         isSaving = true
                         scope.launch {
                             try {
                                 withContext(Dispatchers.IO) {
-                                    store.addEntry(kind, description, minorUnits)
+                                    val existing = editingEntry
+                                    if (existing == null) {
+                                        store.addEntry(kind, description, minorUnits, category)
+                                    } else {
+                                        check(store.updateEntry(existing.id, kind, description, minorUnits, category)) {
+                                            "Entry no longer exists"
+                                        }
+                                    }
                                 }
                                 showAdd = false
+                                editingEntry = null
                                 reload()
                             } catch (_: Exception) {
                                 snackbar.showSnackbar("Could not save the transaction.")
@@ -339,8 +352,18 @@ private fun MetricCard(title: String, value: String, modifier: Modifier = Modifi
 @Composable
 private fun TransactionsPage(
     records: List<FinanceEntry>, modifier: Modifier,
-    onAdd: () -> Unit, onDelete: (FinanceEntry) -> Unit
+    onAdd: () -> Unit, onEdit: (FinanceEntry) -> Unit,
+    onDelete: (FinanceEntry) -> Unit
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var typeFilter by rememberSaveable { mutableStateOf("All") }
+    val visible = remember(records, query, typeFilter) {
+        records.filter { entry ->
+            (typeFilter == "All" || entry.kind.name.equals(typeFilter, ignoreCase = true)) &&
+                (entry.description.contains(query.trim(), ignoreCase = true) ||
+                    entry.category.contains(query.trim(), ignoreCase = true))
+        }
+    }
     LazyColumn(
         modifier.background(Navy),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
@@ -354,23 +377,44 @@ private fun TransactionsPage(
                     Icon(Icons.Filled.Add, contentDescription = null)
                     Text(" Add transaction")
                 }
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Search description or category") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("All", "Income", "Expense").forEach { value ->
+                        FilterChip(
+                            selected = typeFilter == value,
+                            onClick = { typeFilter = value },
+                            label = { Text(value) }
+                        )
+                    }
+                }
+                Text("Showing " + visible.size + " of " + records.size + " entries",
+                    color = Muted, fontSize = 12.sp)
             }
         }
-        if (records.isEmpty()) {
+        if (visible.isEmpty()) {
             item {
-                Text("No entries yet. Start with income or an expense.", color = Muted,
+                Text("No matching entries. Try a different search or add a transaction.", color = Muted,
                     modifier = Modifier.padding(vertical = 24.dp))
             }
         } else {
-            items(records, key = { it.id }) { record ->
-                EntryCard(record, onDelete = { onDelete(record) })
+            items(visible, key = { it.id }) { record ->
+                EntryCard(record, onEdit = { onEdit(record) },
+                    onDelete = { onDelete(record) })
             }
         }
     }
 }
 
 @Composable
-private fun EntryCard(entry: FinanceEntry, onDelete: (() -> Unit)?) {
+private fun EntryCard(
+    entry: FinanceEntry, onEdit: (() -> Unit)? = null, onDelete: (() -> Unit)?
+) {
     val date = remember(entry.createdAt) {
         SimpleDateFormat("dd MMM yyyy · HH:mm", Locale.getDefault()).format(Date(entry.createdAt))
     }
@@ -383,7 +427,8 @@ private fun EntryCard(entry: FinanceEntry, onDelete: (() -> Unit)?) {
             horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(entry.description, color = White, fontWeight = FontWeight.SemiBold)
-                Text(date + " · " + entry.kind.name.lowercase(Locale.getDefault()),
+                Text(date + " · " + entry.category + " · " +
+                    entry.kind.name.lowercase(Locale.getDefault()),
                     color = Muted, fontSize = 11.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -393,8 +438,15 @@ private fun EntryCard(entry: FinanceEntry, onDelete: (() -> Unit)?) {
                     color = if (entry.kind == EntryKind.INCOME) Aqua else Coral,
                     fontWeight = FontWeight.Bold
                 )
-                if (onDelete != null) {
-                    TextButton(onClick = onDelete) { Text("Delete", fontSize = 11.sp) }
+                if (onEdit != null || onDelete != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        if (onEdit != null) {
+                            TextButton(onClick = onEdit) { Text("Edit", fontSize = 11.sp) }
+                        }
+                        if (onDelete != null) {
+                            TextButton(onClick = onDelete) { Text("Delete", fontSize = 11.sp) }
+                        }
+                    }
                 }
             }
         }
@@ -403,19 +455,29 @@ private fun EntryCard(entry: FinanceEntry, onDelete: (() -> Unit)?) {
 
 @Composable
 private fun AddTransactionDialog(
-    saving: Boolean, onDismiss: () -> Unit,
-    onSave: (EntryKind, String, Long) -> Unit
+    existing: FinanceEntry?, saving: Boolean, onDismiss: () -> Unit,
+    onSave: (EntryKind, String, Long, String) -> Unit
 ) {
-    var kindName by rememberSaveable { mutableStateOf(EntryKind.EXPENSE.name) }
-    var description by rememberSaveable { mutableStateOf("") }
-    var amount by rememberSaveable { mutableStateOf("") }
+    var kindName by rememberSaveable(existing?.id) {
+        mutableStateOf(existing?.kind?.name ?: EntryKind.EXPENSE.name)
+    }
+    var description by rememberSaveable(existing?.id) {
+        mutableStateOf(existing?.description ?: "")
+    }
+    var amount by rememberSaveable(existing?.id) {
+        mutableStateOf(existing?.let { Money.amountForCsv(it.minorUnits) } ?: "")
+    }
+    var category by rememberSaveable(existing?.id) {
+        mutableStateOf(existing?.category ?: "Other")
+    }
+    var menuOpen by remember { mutableStateOf(false) }
     val minorUnits = Money.parseMinorUnits(amount)
     val valid = description.trim().isNotEmpty() && description.trim().length <= 80 &&
         minorUnits != null
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New transaction") },
+        title = { Text(if (existing == null) "New transaction" else "Edit transaction") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Manual record only · BDT", color = Muted, fontSize = 12.sp)
@@ -443,14 +505,26 @@ private fun AddTransactionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text("Positive amount, up to 2 decimal places") }
                 )
+                TextButton(onClick = { menuOpen = true }) { Text("Category: " + category) }
+                DropdownMenu(
+                    expanded = menuOpen,
+                    onDismissRequest = { menuOpen = false }
+                ) {
+                    FinanceCategories.values.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = { category = option; menuOpen = false }
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 enabled = valid && !saving,
                 onClick = { if (minorUnits != null) onSave(EntryKind.valueOf(kindName),
-                    description.trim(), minorUnits) }
-            ) { Text(if (saving) "Saving…" else "Save entry") }
+                    description.trim(), minorUnits, category) }
+            ) { Text(if (saving) "Saving…" else if (existing == null) "Save entry" else "Save changes") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancel") }
