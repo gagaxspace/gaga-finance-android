@@ -156,6 +156,29 @@ private fun GaGaFinanceApp() {
         }
     }
 
+    val peopleExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            val peopleSnapshot = people.toList()
+            val eventsSnapshot = debtEvents.toList()
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val stream = context.contentResolver.openOutputStream(uri)
+                            ?: throw IllegalStateException("Cannot open selected document")
+                        stream.bufferedWriter(Charsets.UTF_8).use { writer ->
+                            writer.write(PeopleLedgerCsv.export(peopleSnapshot, eventsSnapshot))
+                        }
+                    }
+                    snackbar.showSnackbar("People Ledger exported to the selected location.")
+                } catch (_: Exception) {
+                    snackbar.showSnackbar("People Ledger export failed.")
+                }
+            }
+        }
+    }
+
     val destinations = listOf(
         Destination("Home", Icons.Filled.Home),
         Destination("Txn", Icons.Filled.ReceiptLong),
@@ -214,7 +237,8 @@ private fun GaGaFinanceApp() {
                 )
                 else -> MorePage(
                     records.size, page,
-                    onExport = { exportLauncher.launch("gaga-finance-transactions.csv") }
+                    onExport = { exportLauncher.launch("gaga-finance-transactions.csv") },
+                    onExportPeople = { peopleExportLauncher.launch("gaga-finance-people-ledger.csv") }
                 )
             }
         }
@@ -597,13 +621,19 @@ private fun AddTransactionDialog(
 }
 
 @Composable
-private fun MorePage(count: Int, modifier: Modifier, onExport: () -> Unit) {
+private fun MorePage(
+    count: Int, modifier: Modifier,
+    onExport: () -> Unit, onExportPeople: () -> Unit
+) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Header("More", "Data and account settings")
         Text("Your records", color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text("You have " + count + " locally recorded transactions.", color = Muted)
         Button(onClick = onExport) { Text("Export transactions to CSV") }
+        Button(onClick = onExportPeople) { Text("Export People Ledger to CSV") }
+        Text("CSV files contain names and financial details. Store them securely.",
+            color = Muted, fontSize = 12.sp)
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("Privacy and limitations", color = White, fontWeight = FontWeight.Bold)
