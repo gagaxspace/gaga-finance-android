@@ -12,6 +12,7 @@ Last reviewed: 2026-11-03
 - Repayment validation in the database transaction prevents overpayment and stores append-only event history. These records are not bank-confirmed and never initiate payments.
 - Monthly category budgets with real recorded-expense progress, over-budget alerts and recurring limits. Manually tracked savings goals with append-only addition/reduction events; savings values are not real-money balances.
 - CSV export of both plans and their savings history, in addition to separate transaction and People Ledger CSV files.
+- On-device Spending Insights: current-month income, expenses, net cashflow, category rankings, previous full calendar-month expense totals and budget warnings; no AI calls or financial-data uploads.
 - Current-month cashflow calculations from entered data.
 - Separate transaction and People Ledger CSV exports through Android's system document picker, with spreadsheet-formula escaping. CSV exports may contain personal information and must be stored securely.
 - Unit tests for parsing, cashflow and CSV export; GitHub Actions test/lint/debug APK pipeline.
@@ -47,6 +48,7 @@ This is a **personal bookkeeping prototype**, not a bank, wallet, remittance ser
 - [ ] Check People Ledger: create person, search, lend, borrow, partial repayment, complete repayment, inspect history/status.
 - [ ] Confirm entering a repayment above the outstanding balance is rejected.
 - [ ] Upgrade from v1→v3 and v2→v3 and verify existing transactions are preserved and People Ledger is usable.
+- [ ] Verify Insights uses correct month boundaries, excludes income from spending categories and shows descriptive month-to-month results.
 - [ ] Verify monthly budget filters correctly reset by month and exclude income entries.
 - [ ] Create savings goals, add/reduce progress, restart app, inspect event history and over-withdrawal protection.
 - [ ] Verify v1/v2/v3→v4 migration on test devices without clearing local data.
