@@ -1,4 +1,4 @@
-name: Android build
+name: Android build and test
 
 on:
   push:
@@ -7,12 +7,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Avoid spending CI minutes on obsolete commits in the same pull request.
+concurrency:
+  group: android-build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   debug-build:
-    name: Assemble debug APK
+    name: Test, lint and assemble debug APK
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -29,8 +34,24 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest --stacktrace
+
+      - name: Check Android lint
+        run: gradle :app:lintDebug --stacktrace
+
       - name: Build debug APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gaga-finance-quality-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
