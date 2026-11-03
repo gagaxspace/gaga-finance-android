@@ -206,6 +206,34 @@ private fun GaGaFinanceApp() {
         }
     }
 
+    val planningExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            val budgetSnapshot = budgets.toList()
+            val goalSnapshot = goals.toList()
+            val changeSnapshot = savingsChanges.toList()
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val stream = context.contentResolver.openOutputStream(uri)
+                            ?: throw IllegalStateException("Cannot open selected document")
+                        stream.bufferedWriter(Charsets.UTF_8).use { writer ->
+                            writer.write(
+                                PlanningCsv.export(
+                                    budgetSnapshot, goalSnapshot, changeSnapshot
+                                )
+                            )
+                        }
+                    }
+                    snackbar.showSnackbar("Budget and savings plan CSV exported.")
+                } catch (_: Exception) {
+                    snackbar.showSnackbar("Planning export failed.")
+                }
+            }
+        }
+    }
+
     val destinations = listOf(
         Destination("Home", Icons.Filled.Home),
         Destination("Txn", Icons.Filled.ReceiptLong),
@@ -277,6 +305,9 @@ private fun GaGaFinanceApp() {
                     records.size, page,
                     onExport = { exportLauncher.launch("gaga-finance-transactions.csv") },
                     onExportPeople = { peopleExportLauncher.launch("gaga-finance-people-ledger.csv") },
+                    onExportPlanning = {
+                        planningExportLauncher.launch("gaga-finance-budgets-goals.csv")
+                    },
                     onPlanning = { plannerOpen = true }
                 )
             }
@@ -800,7 +831,7 @@ private fun AddTransactionDialog(
 private fun MorePage(
     count: Int, modifier: Modifier,
     onExport: () -> Unit, onExportPeople: () -> Unit,
-    onPlanning: () -> Unit
+    onExportPlanning: () -> Unit, onPlanning: () -> Unit
 ) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -810,6 +841,7 @@ private fun MorePage(
         Button(onClick = onPlanning) { Text("Budgets & savings goals") }
         Button(onClick = onExport) { Text("Export transactions to CSV") }
         Button(onClick = onExportPeople) { Text("Export People Ledger to CSV") }
+        Button(onClick = onExportPlanning) { Text("Export budgets & goals to CSV") }
         Text("CSV files contain names and financial details. Store them securely.",
             color = Muted, fontSize = 12.sp)
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
