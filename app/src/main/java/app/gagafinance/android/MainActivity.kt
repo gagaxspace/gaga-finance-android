@@ -238,7 +238,7 @@ private fun GaGaFinanceApp() {
         Destination("Home", Icons.Filled.Home),
         Destination("Txn", Icons.Filled.ReceiptLong),
         Destination("People", Icons.Filled.People),
-        Destination("AI", Icons.Filled.AutoAwesome),
+        Destination("Insights", Icons.Filled.AutoAwesome),
         Destination("More", Icons.Filled.MoreHoriz)
     )
 
@@ -288,9 +288,10 @@ private fun GaGaFinanceApp() {
                     onAddPerson = { showPersonAdd = true },
                     onRecord = { recordingPerson = it }
                 )
-                selected == 3 -> FeatureNotice(
-                    "AI Advisor", "AI insights are not enabled. No personal transaction data is sent to an AI service.",
-                    page
+                selected == 3 -> InsightsPage(
+                    entries = records, budgets = budgets,
+                    modifier = page,
+                    onManageBudgets = { selected = 4; plannerOpen = true }
                 )
                 selected == 4 && plannerOpen -> PlanningPage(
                     entries = records, budgets = budgets, goals = goals,
