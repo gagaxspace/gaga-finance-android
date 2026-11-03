@@ -10,12 +10,12 @@ Standalone native Android project for GaGa Finance, using Kotlin and Jetpack Com
 - Home dashboard with monthly income, expenses and net cashflow derived from local entries.
 - Add and view categorized manual BDT income/expense entries, search and filter history, edit entries and delete with confirmation.
 - Private app-sandbox SQLite storage across restarts (not encrypted at rest). Non-destructive migrations from v1/v2 to v3 preserve earlier finance records.
-- Export transaction CSV via Android's document picker, without broad storage permission.
+- Export separate transaction and People Ledger CSV files through Android's document picker, without broad storage permission.
 - Searchable **People Ledger** with named contacts, amounts lent and borrowed, partial/full repayments, per-person statuses and detailed history. No actual transfers occur.
 - AI and More sections that distinguish unavailable features from working ones.
 - Unit tests, Android lint and automated debug APK builds.
 
-**Important:** People Ledger amounts and statuses are locally recorded by the user; they are not bank-verified debts. Values are user-entered bookkeeping records, *not verified bank or wallet balances*. There is no login or cloud backup. If you uninstall/clear app data, records may be permanently lost. Do not enter banking passwords, identity documents or financial secrets.
+**Important:** People Ledger CSV exports include names and financial details; store them in a secure location. People Ledger amounts and statuses are locally recorded by the user; they are not bank-verified debts. Values are user-entered bookkeeping records, *not verified bank or wallet balances*. There is no login or cloud backup. If you uninstall/clear app data, records may be permanently lost. Do not enter banking passwords, identity documents or financial secrets.
 
 ## Requirements
 
@@ -32,6 +32,8 @@ With Gradle installed, from the repository root:
     gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
 For downloadable debug artifacts, use the Actions workflow run for a successful commit or pull request. Debug APKs use a separate .debug application ID and are not a signed production release.
+
+**Upgrade warning:** GitHub-hosted debug APKs may be signed with different temporary debug keys. Updating a previously installed debug APK can fail with a signature mismatch. Never uninstall an existing installation containing important data before exporting both CSV files; uninstalling can delete all local records. A stable signing strategy is required before reliable upgrades can be tested.
 
 ## Security and configuration
 
