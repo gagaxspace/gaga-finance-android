@@ -11,7 +11,7 @@ Last reviewed: 2026-11-03
 - Searchable People Ledger, lending/borrowing events, partial/full repayments, outstanding per-person balances, status (no activity/active/settled) and detailed history.
 - Repayment validation in the database transaction prevents overpayment and stores append-only event history. These records are not bank-confirmed and never initiate payments.
 - Current-month cashflow calculations from entered data.
-- CSV export through Android's system document picker, with spreadsheet-formula escaping.
+- Separate transaction and People Ledger CSV exports through Android's system document picker, with spreadsheet-formula escaping. CSV exports may contain personal information and must be stored securely.
 - Unit tests for parsing, cashflow and CSV export; GitHub Actions test/lint/debug APK pipeline.
 - No INTERNET permission, no financial provider SDK and no committed service credentials.
 
@@ -45,7 +45,8 @@ This is a **personal bookkeeping prototype**, not a bank, wallet, remittance ser
 - [ ] Check People Ledger: create person, search, lend, borrow, partial repayment, complete repayment, inspect history/status.
 - [ ] Confirm entering a repayment above the outstanding balance is rejected.
 - [ ] Upgrade from v1→v3 and v2→v3 and verify existing transactions are preserved and People Ledger is usable.
-- [ ] Export CSV and inspect contents, including formulas and escaped quotation marks.
+- [ ] Export both CSV files and inspect contents, including formulas and escaped quotation marks.
+- [ ] Verify the development signing certificate is consistent across upgrade tests; GitHub-hosted debug keys may differ, so never uninstall an app containing records without exporting them first.
 - [ ] Test uninstall/clear-data warnings, rotation, TalkBack and long descriptions.
 - [ ] Define Android production application ID, package ownership and release key custody.
 - [ ] Sign release AAB and review Google Play policies for the final declared product.
