@@ -55,6 +55,20 @@ class PlanningModelsTest {
         assertEquals(0L, goal.remainingMinorUnits)
     }
 
+    @Test
+    fun planningExportKeepsGoalHistoryAndEscapesDangerousNames() {
+        val text = PlanningCsv.export(
+            listOf(MonthlyBudget("Food", 25_000L)),
+            listOf(SavingsGoal(7L, "=formula", 100_000L, 20_000L, 0L)),
+            listOf(SavingsChange(11L, 7L, SavingsChangeKind.ADD, 20_000L, 1000L))
+        )
+        assertTrue(text.contains("budget,,\"Food\",250.00"))
+        assertTrue(text.contains("\"'=formula\""))
+        assertTrue(text.contains("goal,7,"))
+        assertTrue(text.contains("goal_change,7"))
+        assertTrue(text.contains(",add,200.00,"))
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun savingsCannotWithdrawAboveRecordedAmount() {
         PlanningMath.balanceAfterChange(2_500L, SavingsChangeKind.WITHDRAW, 2_501L)
