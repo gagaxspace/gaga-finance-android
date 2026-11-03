@@ -62,6 +62,24 @@ class PeopleLedgerModelsTest {
     }
 
     @Test
+    fun peopleLedgerExportIncludesEmptyPeopleAndGuardsFormulas() {
+        val csv = PeopleLedgerCsv.export(
+            listOf(
+                LedgerPerson(1, "=HYPERLINK(1)", "Friend", 0L),
+                LedgerPerson(2, "Person with no entries", "", 0L)
+            ),
+            listOf(
+                DebtEvent(7, 1, DebtEventKind.LENT, 300_000L, "@formula", 1_000L)
+            )
+        )
+        assertTrue(csv.startsWith("person_id,name,nickname_or_note,timestamp_utc,event,amount_bdt,event_note"))
+        assertTrue(csv.contains("\"'=HYPERLINK(1)\""))
+        assertTrue(csv.contains("\"'@formula\""))
+        assertTrue(csv.contains(",3000.00,"))
+        assertTrue(csv.contains("Person with no entries"))
+    }
+
+    @Test
     fun aggregatesMultiplePeopleWithoutCombiningOppositeDebts() {
         val totals = DebtMath.total(
             listOf(
