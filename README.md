@@ -14,6 +14,7 @@ Standalone native Android project for GaGa Finance, using Kotlin and Jetpack Com
 - Searchable **People Ledger** with named contacts, amounts lent and borrowed, partial/full repayments, per-person statuses and detailed history. No actual transfers occur.
 - Local **Budgets & Goals** screens reached through Home or More: recurring monthly category limits, spending progress and overspending notices calculated from actual manual expense entries, goal targets and manually recorded additions/withdrawals.
 - Separate CSV exports for transactions, people and budget/goal records (including savings history).
+- Offline **Spending Insights** tab shows category spending, month-to-date cashflow, previous full month's expenses and budget alerts without third-party AI or network permissions.
 - AI remains disabled until a privacy-reviewed service exists.
 - Unit tests, Android lint and automated debug APK builds.
 
