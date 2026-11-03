@@ -9,12 +9,13 @@ Standalone native Android project for GaGa Finance, using Kotlin and Jetpack Com
 ### Available in the offline foundation
 - Home dashboard with monthly income, expenses and net cashflow derived from local entries.
 - Add and view categorized manual BDT income/expense entries, search and filter history, edit entries and delete with confirmation.
-- Private app-sandbox SQLite storage across restarts (not encrypted at rest).
+- Private app-sandbox SQLite storage across restarts (not encrypted at rest). Non-destructive migrations from v1/v2 to v3 preserve earlier finance records.
 - Export transaction CSV via Android's document picker, without broad storage permission.
-- Dedicated People, AI and More sections that distinguish unavailable features from working ones.
+- Searchable **People Ledger** with named contacts, amounts lent and borrowed, partial/full repayments, per-person statuses and detailed history. No actual transfers occur.
+- AI and More sections that distinguish unavailable features from working ones.
 - Unit tests, Android lint and automated debug APK builds.
 
-**Important:** Values are user-entered bookkeeping records, *not verified bank or wallet balances*. There is no login or cloud backup. If you uninstall/clear app data, records may be permanently lost. Do not enter banking passwords, identity documents or financial secrets.
+**Important:** People Ledger amounts and statuses are locally recorded by the user; they are not bank-verified debts. Values are user-entered bookkeeping records, *not verified bank or wallet balances*. There is no login or cloud backup. If you uninstall/clear app data, records may be permanently lost. Do not enter banking passwords, identity documents or financial secrets.
 
 ## Requirements
 
