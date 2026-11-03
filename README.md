@@ -8,7 +8,7 @@ Standalone native Android project for GaGa Finance, using Kotlin and Jetpack Com
 
 ### Available in the offline foundation
 - Home dashboard with monthly income, expenses and net cashflow derived from local entries.
-- Add and view manual BDT income/expense entries and delete with confirmation.
+- Add and view categorized manual BDT income/expense entries, search and filter history, edit entries and delete with confirmation.
 - Private app-sandbox SQLite storage across restarts (not encrypted at rest).
 - Export transaction CSV via Android's document picker, without broad storage permission.
 - Dedicated People, AI and More sections that distinguish unavailable features from working ones.
