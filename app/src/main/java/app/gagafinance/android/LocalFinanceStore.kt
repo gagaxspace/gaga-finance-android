@@ -1,0 +1,84 @@
+package app.gagafinance.android
+
+import android.content.ContentValues
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+
+/**
+ * A device-only personal bookkeeping store. It has no account connection, payment
+ * authority, cloud sync, or server ledger. Keep it separate from any future wallet.
+ */
+class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
+    context.applicationContext, "gaga-finance-local.db", null, DATABASE_VERSION
+) {
+    override fun onCreate(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT NOT NULL CHECK(kind IN ('INCOME', 'EXPENSE')),
+                description TEXT NOT NULL,
+                minor_units INTEGER NOT NULL CHECK(minor_units > 0),
+                created_at INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX entries_by_created_at ON entries(created_at DESC, id DESC)")
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // Future schema migrations must preserve user-authored local records.
+        if (oldVersion != newVersion) {
+            error("No migration from database version " + oldVersion + " to " + newVersion)
+        }
+    }
+
+    fun listEntries(): List<FinanceEntry> {
+        val result = mutableListOf<FinanceEntry>()
+        readableDatabase.query(
+            "entries",
+            arrayOf("id", "kind", "description", "minor_units", "created_at"),
+            null, null, null, null, "created_at DESC, id DESC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result.add(FinanceEntry(
+                    id = cursor.getLong(0),
+                    kind = EntryKind.valueOf(cursor.getString(1)),
+                    description = cursor.getString(2),
+                    minorUnits = cursor.getLong(3),
+                    createdAt = cursor.getLong(4)
+                ))
+            }
+        }
+        return result
+    }
+
+    fun addEntry(kind: EntryKind, description: String, minorUnits: Long): Long {
+        val clean = description.trim()
+        require(clean.isNotEmpty() && clean.length <= 80) { "Description must be 1–80 characters" }
+        require(minorUnits > 0) { "Amount must be positive" }
+        val values = ContentValues().apply {
+            put("kind", kind.name)
+            put("description", clean)
+            put("minor_units", minorUnits)
+            put("created_at", System.currentTimeMillis())
+        }
+        val db = writableDatabase
+        db.beginTransaction()
+        return try {
+            val id = db.insertOrThrow("entries", null, values)
+            db.setTransactionSuccessful()
+            id
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun deleteEntry(id: Long): Boolean {
+        require(id > 0)
+        return writableDatabase.delete("entries", "id = ?", arrayOf(id.toString())) == 1
+    }
+
+    companion object { private const val DATABASE_VERSION = 1 }
+}
