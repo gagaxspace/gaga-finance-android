@@ -1,38 +1,43 @@
 # GaGa Finance Android
 
-Native Android project for GaGa Finance, built with Kotlin and Jetpack Compose.
+Standalone native Android project for GaGa Finance, using Kotlin and Jetpack Compose.
 
-## Project status
+## Development status
 
-This repository is being initialized as a clean native Android codebase. The first milestone establishes the app shell, visual design system, navigation, and build configuration. It is **not yet a production financial application**.
+**Not a production financial service.** This project now has a local manual-bookkeeping foundation on a review branch. It does not connect to banks, move money, pay bills, manage crypto, create custodial balances or provide investment advice.
 
-Until server-side services and licensed payment integrations are implemented and tested, all financial data must be treated as sample/demo data. Do not use the client app as an authoritative ledger or store secrets in the APK.
+### Available in the offline foundation
+- Home dashboard with monthly income, expenses and net cashflow derived from local entries.
+- Add and view manual BDT income/expense entries and delete with confirmation.
+- Private app-sandbox SQLite storage across restarts (not encrypted at rest).
+- Export transaction CSV via Android's document picker, without broad storage permission.
+- Dedicated People, AI and More sections that distinguish unavailable features from working ones.
+- Unit tests, Android lint and automated debug APK builds.
+
+**Important:** Values are user-entered bookkeeping records, *not verified bank or wallet balances*. There is no login or cloud backup. If you uninstall/clear app data, records may be permanently lost. Do not enter banking passwords, identity documents or financial secrets.
 
 ## Requirements
 
-- Android Studio (recent stable release)
+- Android Studio recent stable version
 - JDK 17
 - Android SDK 35
 
-## Build
+## Build and test
 
-Open this repository in Android Studio and allow Gradle sync, then run the `app` configuration on an emulator or device.
+Open the repository in Android Studio, sync Gradle and run the app configuration.
 
-## Configuration and security
+With Gradle installed, from the repository root:
 
-- No Firebase project credentials or payment-provider secrets are committed.
-- Add environment-specific configuration only through secure local configuration or a trusted backend.
-- Never embed service-account JSON, private keys, or payment secrets in the Android app.
-- Firebase Spark-compatible services should be preferred unless a billing upgrade is explicitly approved.
+    gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
-## Planned implementation milestones
+For downloadable debug artifacts, use the Actions workflow run for a successful commit or pull request. Debug APKs use a separate .debug application ID and are not a signed production release.
 
-1. Native app shell, theme, dashboard and navigation.
-2. Transactions, budgets, savings goals and people screens.
-3. Local persistence and repository abstractions.
-4. Authentication and backend integration.
-5. Server-authoritative ledger, audit trail and transaction safeguards.
-6. Payment-provider integration, only after provider credentials, compliance and settlement flows are verified.
-7. Automated Android build, tests and signed release process.
+## Security and configuration
 
-See `docs/IMPLEMENTATION_STATUS.md` for the current implementation boundary.
+- Do **not** commit Firebase Admin credentials, payment secrets, private keys, customer data or a release keystore.
+- No bank/payment provider is integrated. Do not use the Android app as an authoritative ledger.
+- No Android Internet permission is currently requested.
+- Only implement actual money movement with a trusted backend and appropriate licensed provider/partner, fraud protection, reconciliation, compliance and auditable server-side ledger.
+- No Firebase billing upgrade or paid service should be enabled without approval.
+
+See [implementation and remaining blockers](docs/IMPLEMENTATION_STATUS.md).
