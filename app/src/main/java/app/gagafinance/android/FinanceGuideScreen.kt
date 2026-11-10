@@ -33,17 +33,19 @@ fun FinanceGuidePage(modifier: Modifier, onBack: () -> Unit) {
         "Loans & Borrow" to
             "Create independent dated loan plans, set a simple annual interest estimate and record principal repayments. These contracts are not automatically added to People Ledger totals.",
         "Bills" to
-            "Add a bill and due date. Check its Pending, Overdue or Paid status in Loans & Bills. No background alarms or real payments are sent.",
+            "Add a bill and due date. Check its Pending, Overdue or Paid status in Loans & Bills. Optional reminders can notify you once daily if allowed, but are not exact. No real payments are made.",
         "Budgets & Goals" to
             "Set category and overall monthly budgets. Track target goals by manually recording saved or reduced amounts.",
         "Spending Insights" to
             "Review a local month-to-date breakdown from entered records. It is not AI advice, market data or a bank reconciliation.",
         "Backup and restore" to
-            "More → Export ALL data to JSON saves a complete local backup. More → Import JSON previews it, then replaces local records only after confirmation. Export files are not encrypted.",
+            "More → Export encrypted JSON backup lets you set a password (12+ characters with letters and numbers). Keep it safe; it cannot be recovered. More → Restore JSON can preview and atomically restore the compatible native file. Older plaintext JSON and CSV remain sensitive.",
         "Updating the APK" to
             "Debug APK signing can change between GitHub builds. Export a backup first. Do not uninstall an app that holds important data until you confirm you can recover it.",
         "Security" to
-            "Local SQLite records are private to the app but are not encrypted at rest. Never enter passwords, NID/passport numbers, or banking credentials here."
+            "Local SQLite records are app-private, but not independently encrypted at rest. Never enter banking passwords, NID/passport numbers, or highly sensitive credentials here. No internet account or banking service is connected.",
+        "Privacy policy" to
+            "GaGa Finance stores manually entered income/expense records, names/contact details, loans and bill reminders in Android app-private storage only. The offline version has no sign-in, developer-operated data sync, third-party ads or analytics. Optional generic due reminders require user permission. User-initiated exported files may leave app storage. In Settings, confirmed Reset erases local records but not files saved elsewhere. Privacy enquiries: project issue tracker at github.com/gagaxspace/gaga-finance-android/issues (do not post private data). See docs/privacy.html in the public source for the full policy."
     )
     LazyColumn(
         modifier.background(Bg),
