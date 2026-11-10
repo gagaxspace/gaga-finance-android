@@ -53,21 +53,31 @@ fun PeopleLedgerPage(
     events: List<DebtEvent>,
     modifier: Modifier = Modifier,
     onAddPerson: () -> Unit,
-    onRecord: (LedgerPerson) -> Unit
+    onRecord: (LedgerPerson) -> Unit,
+    onEditPerson: (LedgerPerson) -> Unit
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var selectedPersonId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showSummary by rememberSaveable { mutableStateOf(false) }
     val byPerson = remember(events) { events.groupBy { it.personId } }
     val balances = remember(people, events) {
         people.associate { person -> person.id to DebtMath.balance(byPerson[person.id].orEmpty()) }
     }
     val selectedPerson = people.firstOrNull { it.id == selectedPersonId }
+    if (showSummary) {
+        PeopleSummaryPage(
+            people = people, events = events, modifier = modifier,
+            onBack = { showSummary = false }
+        )
+        return
+    }
     if (selectedPerson != null) {
         PersonHistoryPage(
             selectedPerson, byPerson[selectedPerson.id].orEmpty(),
             balances.getValue(selectedPerson.id), modifier,
             onBack = { selectedPersonId = null },
-            onRecord = { onRecord(selectedPerson) }
+            onRecord = { onRecord(selectedPerson) },
+            onEdit = { onEditPerson(selectedPerson) }
         )
         return
     }
@@ -93,7 +103,13 @@ fun PeopleLedgerPage(
                     BalanceBox("OWED TO YOU", total.lentOutstanding, Modifier.weight(1f))
                     BalanceBox("YOU OWE", total.borrowedOutstanding, Modifier.weight(1f))
                 }
-                Button(onClick = onAddPerson) { Text("+ Add person") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onAddPerson) { Text("+ Add person") }
+                    TextButton(onClick = { showSummary = true }) { Text("Summary All") }
+                }
+                Text("Total people: " + people.size + " · Active: " +
+                    PeopleTotalsMath.calculate(people, events).active,
+                    color = LedgerMuted, fontSize = 12.sp)
                 OutlinedTextField(
                     value = query, onValueChange = { query = it },
                     label = { Text("Search people") },
@@ -198,7 +214,8 @@ private fun PersonLedgerCard(
 @Composable
 private fun PersonHistoryPage(
     person: LedgerPerson, events: List<DebtEvent>, balance: DebtBalance,
-    modifier: Modifier, onBack: () -> Unit, onRecord: () -> Unit
+    modifier: Modifier, onBack: () -> Unit, onRecord: () -> Unit,
+    onEdit: () -> Unit
 ) {
     val recent = remember(events) {
         events.sortedWith(compareByDescending<DebtEvent> { it.createdAt }.thenByDescending { it.id })
@@ -220,6 +237,19 @@ private fun PersonHistoryPage(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     BalanceBox("OWED TO YOU", balance.lentOutstanding, Modifier.weight(1f))
                     BalanceBox("YOU OWE", balance.borrowedOutstanding, Modifier.weight(1f))
+                }
+                Button(onClick = onEdit) { Text("Edit contact details") }
+                if (person.phone.isNotBlank()) {
+                    Text("Phone: " + person.phone, color = LedgerMuted, fontSize = 12.sp)
+                }
+                if (person.email.isNotBlank()) {
+                    Text("Email: " + person.email, color = LedgerMuted, fontSize = 12.sp)
+                }
+                if (person.address.isNotBlank()) {
+                    Text("Address: " + person.address, color = LedgerMuted, fontSize = 12.sp)
+                }
+                if (person.relation.isNotBlank()) {
+                    Text("Relation: " + person.relation, color = LedgerMuted, fontSize = 12.sp)
                 }
                 Button(onClick = onRecord) { Text("+ Record lending or repayment") }
                 Text("Activity history", color = LedgerWhite,
