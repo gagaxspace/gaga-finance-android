@@ -45,7 +45,8 @@ Last reviewed: 2026-11-10.
 - [ ] Full backup export, preview, import, and rollback on malformed/overpaying backup.
 - [ ] Reset needs typed RESET and does not execute on Cancel.
 - [ ] Data persists across process death and device rotation; small screens and TalkBack tested.
-- [ ] Build debug APK with stable signing certificate for upgrades; avoid reinstall/uninstall data loss.
+- [ ] Android 0.4 preview uses a separate `app.gagafinance.android.preview04` package. Verify fresh standalone install; previous debug data remains under the old package and is not automatically imported.
+- [ ] Build production APK with stable signing certificate for genuine upgrades; avoid reinstall/uninstall data loss.
 - [ ] Public release security/privacy review, encryption at rest and account/recovery design.
 
 ## Release blockers
