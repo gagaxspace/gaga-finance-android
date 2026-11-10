@@ -28,8 +28,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -1178,7 +1181,7 @@ private fun GaGaFinanceBrandBar() {
     Surface(color = Panel, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth()
-                .statusBarsPadding()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                 .heightIn(min = 54.dp)
                 .padding(horizontal = 16.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1216,7 +1219,9 @@ private fun CompactFinanceBottomBar(
 ) {
     // Compact 56dp touch targets while preserving Android gesture/navigation inset.
     Surface(color = Panel, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.navigationBarsPadding()) {
+        Column(modifier = Modifier.windowInsetsPadding(
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+        )) {
             Spacer(
                 modifier = Modifier.fillMaxWidth().height(1.dp)
                     .background(Color(0xFF2A3B55))
