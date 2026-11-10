@@ -15,7 +15,9 @@ enum class EntryKind { INCOME, EXPENSE }
 object FinanceCategories {
     val values = listOf(
         "Other", "Food", "Transport", "Housing", "Bills", "Shopping",
-        "Salary", "Business", "Education", "Health", "Travel"
+        "Salary", "Business", "Education", "Health", "Travel",
+        "Groceries", "Utilities", "Internet", "Subscriptions", "Mobile Recharge",
+        "Family", "Gifts", "Entertainment", "Personal Care", "Rent", "Savings"
     )
 
     fun valid(category: String): Boolean = category in values
