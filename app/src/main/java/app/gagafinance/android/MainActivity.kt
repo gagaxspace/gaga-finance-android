@@ -1211,6 +1211,18 @@ private fun AddTransactionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text("Positive amount, up to 2 decimal places") }
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        dateText = FinanceDates.formatDate(System.currentTimeMillis())
+                    }) { Text("Today") }
+                    TextButton(onClick = {
+                        dateText = FinanceDates.formatDate(
+                            DailyFocusMath.dateRange(
+                                DailyFocusMath.dayStart(System.currentTimeMillis()), -1
+                            )
+                        )
+                    }) { Text("Yesterday") }
+                }
                 OutlinedTextField(
                     value = dateText, onValueChange = { dateText = it.take(10) },
                     label = { Text("Transaction date YYYY-MM-DD") },
