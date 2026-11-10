@@ -93,15 +93,29 @@ fun PlanningPage(
                             " · recurring monthly limits",
                         color = ScreenMuted, fontSize = 13.sp
                     )
+                    Button(onClick = {
+                        onBudget(budgets.firstOrNull { it.category == "Overall" }
+                            ?: MonthlyBudget("Overall", 0L))
+                    }) { Text("⚙ Set overall budget") }
                     Button(onClick = { onBudget(null) }) { Text("+ Set category budget") }
                     Text("Only recorded expenses count. Limits reset each month.",
                         color = ScreenMuted, fontSize = 12.sp)
                 }
             }
+            val overall = budgets.firstOrNull { it.category == "Overall" }
+            if (overall != null) {
+                item {
+                    val status = PlanningMath.budgetStatus(overall, entries)
+                    Text("Overall monthly progress", color = ScreenText,
+                        fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    BudgetCard(status, onEdit = { onBudget(overall) },
+                        onRemove = { onRemoveBudget(overall) })
+                }
+            }
             if (budgets.isEmpty()) {
                 item { EmptyPlanCard("No budgets yet. Set a monthly spending limit.") }
             } else {
-                items(budgets, key = { it.category }) { budget ->
+                items(budgets.filter { it.category != "Overall" }, key = { it.category }) { budget ->
                     BudgetCard(
                         PlanningMath.budgetStatus(budget, entries),
                         onEdit = { onBudget(budget) },
@@ -251,7 +265,11 @@ fun BudgetDialog(
     val parsed = Money.parseMinorUnits(amount)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) "Set monthly budget" else "Edit budget") },
+        title = { Text(when {
+            existing?.category == "Overall" -> "Overall monthly budget"
+            existing == null -> "Set category budget"
+            else -> "Edit budget"
+        }) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Recurring monthly expense limit (BDT).", color = ScreenMuted, fontSize = 12.sp)
