@@ -29,6 +29,21 @@ class PlanningModelsTest {
     }
 
     @Test
+    fun overallBudgetCoversAllExpenseCategoriesButNotIncome() {
+        val now = System.currentTimeMillis()
+        val status = PlanningMath.budgetStatus(
+            MonthlyBudget("Overall", 200_00L),
+            listOf(
+                FinanceEntry(1, EntryKind.EXPENSE, "Food", 120_00L, now, "Food"),
+                FinanceEntry(2, EntryKind.EXPENSE, "Bus", 50_00L, now, "Transport"),
+                FinanceEntry(3, EntryKind.INCOME, "Salary", 800_00L, now, "Salary")
+            ), now
+        )
+        assertEquals(170_00L, status.spentMinorUnits)
+        assertEquals(30_00L, status.remainingMinorUnits)
+    }
+
+    @Test
     fun budgetCorrectlyReportsOverspend() {
         val now = System.currentTimeMillis()
         val status = PlanningMath.budgetStatus(
