@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.sp
 private val Bg = Color(0xFF0B1424)
 private val Panel = Color(0xFF142238)
 private val Aqua = Color(0xFF35D6C5)
-private val Muted = Color(0xFFB7C5D7)
+private val Muted = Color(0xFFC9D6E4)
 private val Bright = Color(0xFFF4F7FB)
 
 @Composable
@@ -43,12 +43,12 @@ fun PeopleSummaryPage(
     val totals = PeopleTotalsMath.calculate(people, events)
     LazyColumn(
         modifier.background(Bg),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             TextButton(onClick = onBack) { Text("‹ Back to People") }
-            Text("Summary All", color = Bright, fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Text("Summary All", color = Bright, fontSize = 23.sp, fontWeight = FontWeight.Bold)
             Text("Manual People Ledger · historical totals vs outstanding",
                 color = Muted, fontSize = 12.sp)
         }
