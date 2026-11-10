@@ -100,7 +100,10 @@ private data class FinanceSnapshot(
     val debts: List<DebtEvent>,
     val budgets: List<MonthlyBudget>,
     val goals: List<SavingsGoal>,
-    val savingsChanges: List<SavingsChange>
+    val savingsChanges: List<SavingsChange>,
+    val loans: List<LoanContract>,
+    val loanRepayments: List<LoanRepayment>,
+    val bills: List<BillReminder>
 )
 
 @Composable
@@ -116,6 +119,15 @@ private fun GaGaFinanceApp() {
     var budgets by remember { mutableStateOf<List<MonthlyBudget>>(emptyList()) }
     var goals by remember { mutableStateOf<List<SavingsGoal>>(emptyList()) }
     var savingsChanges by remember { mutableStateOf<List<SavingsChange>>(emptyList()) }
+    var loans by remember { mutableStateOf<List<LoanContract>>(emptyList()) }
+    var loanRepayments by remember { mutableStateOf<List<LoanRepayment>>(emptyList()) }
+    var bills by remember { mutableStateOf<List<BillReminder>>(emptyList()) }
+    var hubRoute by rememberSaveable { mutableStateOf("") }
+    var editingPerson by remember { mutableStateOf<LedgerPerson?>(null) }
+    var showLoanAdd by remember { mutableStateOf(false) }
+    var repayingLoan by remember { mutableStateOf<LoanContract?>(null) }
+    var showBillAdd by remember { mutableStateOf(false) }
+    var pendingBillDelete by remember { mutableStateOf<BillReminder?>(null) }
     var plannerOpen by rememberSaveable { mutableStateOf(false) }
     var budgetDialogOpen by remember { mutableStateOf(false) }
     var editingBudget by remember { mutableStateOf<MonthlyBudget?>(null) }
@@ -141,7 +153,10 @@ private fun GaGaFinanceApp() {
                         debts = store.listDebtEvents(),
                         budgets = store.listBudgets(),
                         goals = store.listSavingsGoals(),
-                        savingsChanges = store.listSavingsChanges()
+                        savingsChanges = store.listSavingsChanges(),
+                        loans = store.listLoans(),
+                        loanRepayments = store.listLoanRepayments(),
+                        bills = store.listBills()
                     )
                 }
                 records = snapshot.entries
@@ -150,6 +165,9 @@ private fun GaGaFinanceApp() {
                 budgets = snapshot.budgets
                 goals = snapshot.goals
                 savingsChanges = snapshot.savingsChanges
+                loans = snapshot.loans
+                loanRepayments = snapshot.loanRepayments
+                bills = snapshot.bills
                 loadError = null
             } catch (_: Exception) {
                 loadError = "Unable to read local records. Your existing data has not been erased."
@@ -286,12 +304,34 @@ private fun GaGaFinanceApp() {
                     events = debtEvents,
                     modifier = page,
                     onAddPerson = { showPersonAdd = true },
-                    onRecord = { recordingPerson = it }
+                    onRecord = { recordingPerson = it },
+                    onEditPerson = { editingPerson = it }
                 )
                 selected == 3 -> InsightsPage(
                     entries = records, budgets = budgets,
                     modifier = page,
                     onManageBudgets = { selected = 4; plannerOpen = true }
+                )
+                selected == 4 && hubRoute == "obligations" -> ObligationsPage(
+                    people = people, loans = loans, repayments = loanRepayments,
+                    bills = bills, modifier = page,
+                    onBack = { hubRoute = "" },
+                    onAddLoan = { showLoanAdd = true },
+                    onRepay = { repayingLoan = it },
+                    onAddBill = { showBillAdd = true },
+                    onSetBillPaid = { bill, paid ->
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    check(store.setBillPaid(bill.id, paid))
+                                }
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Bill update failed.")
+                            }
+                        }
+                    },
+                    onDeleteBill = { pendingBillDelete = it }
                 )
                 selected == 4 && plannerOpen -> PlanningPage(
                     entries = records, budgets = budgets, goals = goals,
@@ -309,9 +349,135 @@ private fun GaGaFinanceApp() {
                     onExportPlanning = {
                         planningExportLauncher.launch("gaga-finance-budgets-goals.csv")
                     },
-                    onPlanning = { plannerOpen = true }
+                    onPlanning = { hubRoute = ""; plannerOpen = true },
+                    onObligations = { plannerOpen = false; hubRoute = "obligations" },
+                    overdueBills = bills.count {
+                        ObligationMath.billStatus(it, System.currentTimeMillis()) == "Overdue"
+                    }
                 )
             }
+        }
+
+        editingPerson?.let { person ->
+            EditPersonDialog(
+                person = person, saving = isSaving,
+                onDismiss = { if (!isSaving) editingPerson = null },
+                onSave = { changed ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    check(store.updatePerson(changed))
+                                }
+                                editingPerson = null
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not save contact details.")
+                            } finally {
+                                isSaving = false
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showLoanAdd) {
+            AddLoanDialog(
+                people = people, saving = isSaving,
+                onDismiss = { if (!isSaving) showLoanAdd = false },
+                onSave = { personId, direction, principal, interest, due, note ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    store.createLoan(personId, direction, principal, interest, due, note)
+                                }
+                                showLoanAdd = false
+                                reload()
+                            } catch (e: Exception) {
+                                snackbar.showSnackbar(e.message ?: "Could not create loan.")
+                            } finally { isSaving = false }
+                        }
+                    }
+                }
+            )
+        }
+
+        repayingLoan?.let { loan ->
+            LoanRepaymentDialog(
+                loan = loan, repayments = loanRepayments, saving = isSaving,
+                onDismiss = { if (!isSaving) repayingLoan = null },
+                onSave = { minor ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    store.recordLoanRepayment(loan.id, minor)
+                                }
+                                repayingLoan = null
+                                reload()
+                            } catch (e: Exception) {
+                                snackbar.showSnackbar(e.message ?: "Repayment failed.")
+                            } finally { isSaving = false }
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showBillAdd) {
+            AddBillDialog(
+                saving = isSaving, onDismiss = { if (!isSaving) showBillAdd = false },
+                onSave = { name, amount, due, note ->
+                    if (!isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    store.createBill(name, amount, due, note)
+                                }
+                                showBillAdd = false
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not add bill.")
+                            } finally { isSaving = false }
+                        }
+                    }
+                }
+            )
+        }
+
+        pendingBillDelete?.let { bill ->
+            AlertDialog(
+                onDismissRequest = { if (!isSaving) pendingBillDelete = null },
+                title = { Text("Delete bill reminder?") },
+                text = { Text("This permanently removes the local bill record.") },
+                confirmButton = {
+                    TextButton(enabled = !isSaving, onClick = {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    check(store.deleteBill(bill.id))
+                                }
+                                pendingBillDelete = null
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not delete bill.")
+                            } finally { isSaving = false }
+                        }
+                    }) { Text("Delete") }
+                },
+                dismissButton = {
+                    TextButton(enabled = !isSaving, onClick = {
+                        pendingBillDelete = null
+                    }) { Text("Cancel") }
+                }
+            )
         }
 
         if (budgetDialogOpen) {
@@ -832,7 +998,8 @@ private fun AddTransactionDialog(
 private fun MorePage(
     count: Int, modifier: Modifier,
     onExport: () -> Unit, onExportPeople: () -> Unit,
-    onExportPlanning: () -> Unit, onPlanning: () -> Unit
+    onExportPlanning: () -> Unit, onPlanning: () -> Unit,
+    onObligations: () -> Unit, overdueBills: Int
 ) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -840,6 +1007,11 @@ private fun MorePage(
         Text("Your records", color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text("You have " + count + " locally recorded transactions.", color = Muted)
         Button(onClick = onPlanning) { Text("Budgets & savings goals") }
+        Button(onClick = onObligations) { Text("Loans & Borrow · Bill Reminders") }
+        if (overdueBills > 0) {
+            Text(overdueBills.toString() + " overdue bill reminders",
+                color = Coral, fontSize = 12.sp)
+        }
         Button(onClick = onExport) { Text("Export transactions to CSV") }
         Button(onClick = onExportPeople) { Text("Export People Ledger to CSV") }
         Button(onClick = onExportPlanning) { Text("Export budgets & goals to CSV") }
