@@ -38,7 +38,7 @@ import java.math.BigDecimal
 private val Bkg = Color(0xFF0B1424)
 private val Panel = Color(0xFF142238)
 private val Aqua = Color(0xFF35D6C5)
-private val Muted = Color(0xFFB7C5D7)
+private val Muted = Color(0xFFC9D6E4)
 private val White = Color(0xFFF4F7FB)
 private val Coral = Color(0xFFFFB4A9)
 
@@ -57,15 +57,15 @@ fun ObligationsPage(
     val now = System.currentTimeMillis()
     LazyColumn(
         modifier.background(Bkg),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onBack) { Text("‹ More") }
-                Text("Loans & Bills", color = White, fontSize = 25.sp,
+                Text("Loans & Bills", color = White, fontSize = 23.sp,
                     fontWeight = FontWeight.Bold)
-                Text("Manual records only · no payment processing or push reminders",
+                Text("Manual records · Optional daily due reminders · No payments",
                     color = Muted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
@@ -129,7 +129,7 @@ fun ObligationsPage(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            Modifier.padding(15.dp),
+                            Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(7.dp)
                         ) {
                             Text(personNames[loan.personId] ?: "Unknown person",
@@ -183,7 +183,7 @@ fun ObligationsPage(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
-                            Modifier.padding(15.dp),
+                            Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(bill.name, color = White, fontSize = 17.sp,
@@ -218,9 +218,9 @@ private fun SimpleStat(label: String, value: String) {
         colors = CardDefaults.cardColors(containerColor = Panel),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(label, color = Muted, fontSize = 11.sp)
-            Text(value, color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(label, color = Muted, fontSize = 12.sp)
+            Text(value, color = White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -303,7 +303,7 @@ fun AddLoanDialog(
                 )
                 if (!valid) {
                     Text("Select a person and provide a valid amount, rate and date.",
-                        color = Muted, fontSize = 11.sp)
+                        color = Muted, fontSize = 12.sp)
                 }
             }
         },
