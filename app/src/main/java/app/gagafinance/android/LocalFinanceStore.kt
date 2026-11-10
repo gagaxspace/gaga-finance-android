@@ -33,6 +33,7 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         db.execSQL("CREATE INDEX entries_by_created_at ON entries(created_at DESC, id DESC)")
         createPeopleTables(db)
         createPlanningTables(db)
+        createExtrasTables(db)
     }
 
     private fun createPeopleTables(db: SQLiteDatabase) {
@@ -101,6 +102,52 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    private fun createExtrasTables(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS loan_contracts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                person_id INTEGER NOT NULL REFERENCES ledger_people(id) ON DELETE RESTRICT,
+                direction TEXT NOT NULL CHECK(direction IN ('LENT', 'BORROWED')),
+                principal_minor INTEGER NOT NULL CHECK(principal_minor > 0),
+                annual_interest_bps INTEGER NOT NULL DEFAULT 0 CHECK(annual_interest_bps BETWEEN 0 AND 10000),
+                due_at INTEGER NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS loan_repayments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                loan_id INTEGER NOT NULL REFERENCES loan_contracts(id) ON DELETE RESTRICT,
+                minor_units INTEGER NOT NULL CHECK(minor_units > 0),
+                created_at INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS bill_reminders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                minor_units INTEGER NOT NULL CHECK(minor_units > 0),
+                due_at INTEGER NOT NULL,
+                paid_at INTEGER,
+                note TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS bills_by_due ON bill_reminders(due_at, id)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS loan_repayments_by_loan ON loan_repayments(loan_id, id)"
+        )
+    }
+
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         require(oldVersion in 1..newVersion && newVersion == DATABASE_VERSION) {
             "Unsupported database migration from " + oldVersion + " to " + newVersion
@@ -113,6 +160,13 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         }
         if (oldVersion < 4) {
             createPlanningTables(db)
+        }
+        if (oldVersion < 5) {
+            db.execSQL("ALTER TABLE ledger_people ADD COLUMN phone TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE ledger_people ADD COLUMN email TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE ledger_people ADD COLUMN address TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE ledger_people ADD COLUMN relation TEXT NOT NULL DEFAULT ''")
+            createExtrasTables(db)
         }
     }
 
@@ -187,7 +241,9 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
     fun listPeople(): List<LedgerPerson> {
         val result = mutableListOf<LedgerPerson>()
         readableDatabase.query(
-            "ledger_people", arrayOf("id", "name", "note", "created_at"),
+            "ledger_people", arrayOf(
+                "id", "name", "note", "created_at", "phone", "email", "address", "relation"
+            ),
             null, null, null, null, "name COLLATE NOCASE ASC, id ASC"
         ).use { cursor ->
             while (cursor.moveToNext()) {
@@ -196,7 +252,11 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
                         id = cursor.getLong(0),
                         name = cursor.getString(1),
                         note = cursor.getString(2),
-                        createdAt = cursor.getLong(3)
+                        createdAt = cursor.getLong(3),
+                        phone = cursor.getString(4),
+                        email = cursor.getString(5),
+                        address = cursor.getString(6),
+                        relation = cursor.getString(7)
                     )
                 )
             }
@@ -244,6 +304,27 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
             put("created_at", System.currentTimeMillis())
         }
         return writableDatabase.insertOrThrow("ledger_people", null, values)
+    }
+
+    fun updatePerson(profile: LedgerPerson): Boolean {
+        require(profile.id > 0L)
+        require(profile.name.isNotBlank() && profile.name.trim().length <= 80)
+        require(profile.note.length <= 160)
+        require(profile.phone.length <= 32)
+        require(profile.email.length <= 160)
+        require(profile.address.length <= 200)
+        require(profile.relation.length <= 80)
+        val fields = ContentValues().apply {
+            put("name", profile.name.trim())
+            put("note", profile.note.trim())
+            put("phone", profile.phone.trim())
+            put("email", profile.email.trim())
+            put("address", profile.address.trim())
+            put("relation", profile.relation.trim())
+        }
+        return writableDatabase.update(
+            "ledger_people", fields, "id = ?", arrayOf(profile.id.toString())
+        ) == 1
     }
 
     /**
@@ -415,5 +496,5 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         return result
     }
 
-    companion object { private const val DATABASE_VERSION = 4 }
+    companion object { private const val DATABASE_VERSION = 5 }
 }
