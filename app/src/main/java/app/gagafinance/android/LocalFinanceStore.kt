@@ -496,5 +496,178 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         return result
     }
 
+    fun listLoans(): List<LoanContract> {
+        val records = mutableListOf<LoanContract>()
+        readableDatabase.query(
+            "loan_contracts",
+            arrayOf(
+                "id", "person_id", "direction", "principal_minor",
+                "annual_interest_bps", "due_at", "note", "created_at"
+            ),
+            null, null, null, null, "due_at ASC, id DESC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                records.add(
+                    LoanContract(
+                        id = cursor.getLong(0), personId = cursor.getLong(1),
+                        direction = DebtEventKind.valueOf(cursor.getString(2)),
+                        principalMinor = cursor.getLong(3),
+                        annualInterestBps = cursor.getInt(4),
+                        dueAt = cursor.getLong(5),
+                        note = cursor.getString(6),
+                        createdAt = cursor.getLong(7)
+                    )
+                )
+            }
+        }
+        return records
+    }
+
+    fun listLoanRepayments(): List<LoanRepayment> {
+        val records = mutableListOf<LoanRepayment>()
+        readableDatabase.query(
+            "loan_repayments",
+            arrayOf("id", "loan_id", "minor_units", "created_at"),
+            null, null, null, null, "created_at ASC, id ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                records.add(
+                    LoanRepayment(
+                        id = cursor.getLong(0),
+                        loanId = cursor.getLong(1),
+                        minorUnits = cursor.getLong(2),
+                        createdAt = cursor.getLong(3)
+                    )
+                )
+            }
+        }
+        return records
+    }
+
+    fun createLoan(
+        personId: Long, direction: DebtEventKind, principalMinor: Long,
+        interestBps: Int, dueAt: Long, note: String
+    ): Long {
+        require(personId > 0 && principalMinor > 0)
+        require(direction == DebtEventKind.LENT || direction == DebtEventKind.BORROWED)
+        require(interestBps in 0..10_000)
+        require(dueAt >= FinanceDates.parseDate("2000-01-01")!!)
+        require(note.length <= 160)
+        val db = writableDatabase
+        db.beginTransaction()
+        return try {
+            val personExists = db.query(
+                "ledger_people", arrayOf("id"), "id=?",
+                arrayOf(personId.toString()), null, null, null
+            ).use { it.moveToFirst() }
+            require(personExists) { "Create the person before adding a loan" }
+            val values = ContentValues().apply {
+                put("person_id", personId)
+                put("direction", direction.name)
+                put("principal_minor", principalMinor)
+                put("annual_interest_bps", interestBps)
+                put("due_at", dueAt)
+                put("note", note.trim())
+                put("created_at", System.currentTimeMillis())
+            }
+            val id = db.insertOrThrow("loan_contracts", null, values)
+            db.setTransactionSuccessful()
+            id
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** Loan plan repayments reduce only the matching loan's principal. */
+    fun recordLoanRepayment(loanId: Long, amountMinor: Long): Long {
+        require(loanId > 0L && amountMinor > 0L)
+        val db = writableDatabase
+        db.beginTransaction()
+        return try {
+            val loan = db.query(
+                "loan_contracts", arrayOf("principal_minor"), "id=?",
+                arrayOf(loanId.toString()), null, null, null
+            ).use { cursor ->
+                require(cursor.moveToFirst()) { "Loan record not found" }
+                cursor.getLong(0)
+            }
+            val repaid = db.query(
+                "loan_repayments", arrayOf("minor_units"), "loan_id=?",
+                arrayOf(loanId.toString()), null, null, null
+            ).use { cursor ->
+                var total = 0L
+                while (cursor.moveToNext()) {
+                    total = Math.addExact(total, cursor.getLong(0))
+                }
+                total
+            }
+            require(amountMinor <= Math.subtractExact(loan, repaid)) {
+                "Repayment exceeds remaining loan principal"
+            }
+            val fields = ContentValues().apply {
+                put("loan_id", loanId)
+                put("minor_units", amountMinor)
+                put("created_at", System.currentTimeMillis())
+            }
+            val id = db.insertOrThrow("loan_repayments", null, fields)
+            db.setTransactionSuccessful()
+            id
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun listBills(): List<BillReminder> {
+        val result = mutableListOf<BillReminder>()
+        readableDatabase.query(
+            "bill_reminders",
+            arrayOf("id", "name", "minor_units", "due_at", "paid_at", "note", "created_at"),
+            null, null, null, null, "due_at ASC, id ASC"
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                result.add(
+                    BillReminder(
+                        id = cursor.getLong(0), name = cursor.getString(1),
+                        minorUnits = cursor.getLong(2), dueAt = cursor.getLong(3),
+                        paidAt = if (cursor.isNull(4)) null else cursor.getLong(4),
+                        note = cursor.getString(5), createdAt = cursor.getLong(6)
+                    )
+                )
+            }
+        }
+        return result
+    }
+
+    fun createBill(name: String, amountMinor: Long, dueAt: Long, note: String): Long {
+        require(name.isNotBlank() && name.length <= 80)
+        require(amountMinor > 0 && note.length <= 160)
+        val values = ContentValues().apply {
+            put("name", name.trim())
+            put("minor_units", amountMinor)
+            put("due_at", dueAt)
+            put("note", note.trim())
+            put("created_at", System.currentTimeMillis())
+        }
+        return writableDatabase.insertOrThrow("bill_reminders", null, values)
+    }
+
+    fun setBillPaid(billId: Long, paid: Boolean): Boolean {
+        require(billId > 0)
+        val values = ContentValues().apply {
+            if (paid) put("paid_at", System.currentTimeMillis())
+            else putNull("paid_at")
+        }
+        return writableDatabase.update(
+            "bill_reminders", values, "id=?", arrayOf(billId.toString())
+        ) == 1
+    }
+
+    fun deleteBill(billId: Long): Boolean {
+        require(billId > 0)
+        return writableDatabase.delete(
+            "bill_reminders", "id=?", arrayOf(billId.toString())
+        ) == 1
+    }
+
     companion object { private const val DATABASE_VERSION = 5 }
 }
