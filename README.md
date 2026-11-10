@@ -53,3 +53,13 @@ For downloadable debug artifacts, use the Actions workflow run for a successful 
 - No Firebase billing upgrade or paid service should be enabled without approval.
 
 See [implementation and remaining blockers](docs/IMPLEMENTATION_STATUS.md), plus the [screenshot feature-parity audit](docs/SCREENSHOT_PARITY.md). The Firebase-hosted web app is a separate data source; screenshots and web exports do not automatically populate this Android app.
+
+## GaGa Finance branding: version 0.5.0
+
+- Launcher icon: the user's selected navy/aqua G and growth-bars emblem, optimized for Android.
+- Splash: branded launch imagery on pre-Android-12 devices and Android 12+ system splash icon.
+- Global navigation: consistent branded app bar; the More screen shows the GaGa Finance logo and version.
+- Install isolation: 0.5.0 debug uses `app.gagafinance.android.preview05`. It is a **separate preview app** from 0.4.0; it does **not** automatically migrate or sync data. A compatible native JSON backup must be explicitly selected and restored if desired.
+- Public GitHub prerelease builds are **testing-only**. A consistent release signing key, encryption-at-rest review, device QA and a Play Store release AAB remain outstanding.
+
+The generated full-resolution logo artwork remains separately available as a design asset. The Android repository contains an optimized launcher resource of that actual logo.
