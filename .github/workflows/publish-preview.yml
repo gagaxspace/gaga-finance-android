@@ -1,0 +1,48 @@
+name: Publish Android preview APK
+
+on:
+  push:
+    branches:
+      - improve/offline-finance-foundation-20261103
+    paths:
+      - .github/workflows/publish-preview.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gaga-finance-preview-publish
+  cancel-in-progress: false
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Verify unit tests, lint, and build APK
+        run: |
+          gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --stacktrace
+
+      - name: Publish downloadable public PREVIEW release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: gaga-finance-0.4.0-preview.1
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          gh release create "$TAG" "app/build/outputs/apk/debug/app-debug.apk#GaGaFinance-0.4.0-Preview.apk" \
+            --target "$GITHUB_SHA" \
+            --title "GaGa Finance 0.4.0 — Android preview (offline testing only)" \
+            --prerelease \
+            --notes "Offline preview APK for manual bookkeeping, People Ledger, loans, budgets, bill tracking and local backups. NOT a bank or production finance service. This preview uses a separate package ID, starts with an empty local database, and does not connect to web account data. Do not enter banking credentials or sensitive identification data. Local data is not encrypted at rest. Do not rely on this build for real-money transfers."
