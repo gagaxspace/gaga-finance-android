@@ -12,14 +12,14 @@ android {
         applicationId = "app.gagafinance.android"
         minSdk = 23
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.6.0"
         manifestPlaceholders["gagaAppLabel"] = "GaGa Finance"
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".preview05"
+            applicationIdSuffix = ".preview06"
             versionNameSuffix = "-preview"
             manifestPlaceholders["gagaAppLabel"] = "GaGa Finance Preview"
         }
