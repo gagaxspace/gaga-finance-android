@@ -42,7 +42,7 @@ With Gradle installed, from the repository root:
 
 For downloadable debug artifacts, use the Actions workflow run for a successful commit or pull request. Debug APKs use a separate .debug application ID and are not a signed production release.
 
-**Upgrade warning:** GitHub-hosted debug APKs may be signed with different temporary debug keys. Updating a previously installed debug APK can fail with a signature mismatch. Never uninstall an existing installation containing important data before exporting a complete JSON backup; uninstalling can delete all local records. A stable signing strategy is required before reliable upgrades can be tested.
+**Safe preview install:** Version 0.4.0 debug uses package `app.gagafinance.android.preview04`, labeled **GaGa Finance Preview**. It installs separately from earlier `.debug` builds and starts with its own empty local database. It does not migrate or synchronize the old app's records. **Upgrade warning:** GitHub-hosted debug APKs may be signed with different temporary debug keys. Updating a previously installed debug APK can fail with a signature mismatch. Never uninstall an existing installation containing important data before exporting a complete JSON backup; uninstalling can delete all local records. A stable signing strategy is required before reliable upgrades can be tested.
 
 ## Security and configuration
 
