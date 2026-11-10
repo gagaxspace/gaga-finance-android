@@ -58,7 +58,7 @@ object PlanningMath {
         val (start, end) = monthRange(now)
         val spent = entries.asSequence().filter {
             it.kind == EntryKind.EXPENSE &&
-                it.category == budget.category &&
+                (budget.category == "Overall" || it.category == budget.category) &&
                 it.createdAt >= start && it.createdAt < end
         }.fold(0L) { total, item -> Math.addExact(total, item.minorUnits) }
         return BudgetStatus(budget.category, budget.limitMinorUnits, spent)
