@@ -63,3 +63,13 @@ See [implementation and remaining blockers](docs/IMPLEMENTATION_STATUS.md), plus
 - Public GitHub prerelease builds are **testing-only**. A consistent release signing key, encryption-at-rest review, device QA and a Play Store release AAB remain outstanding.
 
 The generated full-resolution logo artwork remains separately available as a design asset. The Android repository contains an optimized launcher resource of that actual logo.
+
+## Version 0.7.0: daily utility and Google Play preparation (November 2026)
+
+**Added to the development PR:** API 36 target/AGP 8.13.2, permission-based daily WorkManager alerts for bills/loan plans (approximate, not exact), user-selected password-encrypted AES-GCM JSON backup with confirmed native restore, and organized Settings controls. Existing offline Today, people, expenses, budgets, goals, insights and bill/loan records remain. Unit tests cover basic password policy. No server or payment integration was added.
+
+The default **release** application ID is `app.gagafinance.android`; the separate debug test package is `app.gagafinance.android.preview07`. They do not share SQLite records. **Do not uninstall old installs containing records.** Restore is manual from a supported native backup. No database encryption at rest or automatic cloud sync is claimed.
+
+A guarded `play-bundle.yml` workflow can build a privately signed Google Play AAB after the owner configures a **dedicated stable upload key** in GitHub Actions repository secrets. Missing signing credentials mean a production AAB has not been produced. See [Play Store checklist](docs/PLAY_RELEASE_CHECKLIST.md) and [privacy policy draft](docs/privacy.html).
+
+The public GitHub prerelease is for manual offline feature testing. **Do not provide NID, banking credentials or financial account passwords**. Actual money movement is intentionally not implemented. A complete real-device verification and production security review remain required.
