@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.background
@@ -37,6 +38,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -1528,33 +1530,24 @@ private fun MorePage(
     onGuide: () -> Unit, onMarkets: () -> Unit, onBanking: () -> Unit
 ) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
-        .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Shared GaGa brand bar appears on every screen.
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Panel),
-            modifier = Modifier.fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.gaga_brand_icon),
-                    contentDescription = "GaGa Finance logo",
-                    modifier = Modifier.size(60.dp)
-                )
-                Column {
-                    Text("GaGa Finance", color = White,
-                        fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text("Smart Finance Hub", color = Aqua, fontSize = 13.sp)
-                    Text("Version 0.7.0 · Offline preview", color = Muted, fontSize = 11.sp)
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("More", color = White, fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold)
+                Text("Settings & finance tools", color = Muted, fontSize = 12.sp)
             }
+            Text("v0.8.0", color = Aqua, fontSize = 12.sp,
+                fontWeight = FontWeight.Medium)
         }
-        Text("Your finance tools", color = White,
-            fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(count.toString() + " transactions saved on this device",
+        Text("FINANCE TOOLS", color = Muted,
+            fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text(count.toString() + " transactions on this device",
             color = Muted, fontSize = 12.sp)
         MoreToolTile("Budgets & savings goals",
             "Monthly limits, goals and progress", onPlanning)
@@ -1568,13 +1561,7 @@ private fun MorePage(
         MoreToolTile("Instructions & safety guide",
             "Learn how to use the app and protect your data", onGuide)
 
-        Text("External services", color = White, fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold)
-        MoreToolTile("Markets & portfolio", "Not connected · no live quotes", onMarkets)
-        MoreToolTile("Mobile banking",
-            "Not connected · no transfers or account balances", onBanking)
-
-        Text("Reminders", color = White, fontSize = 17.sp,
+        Text("Reminders", color = White, fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold)
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -1600,7 +1587,7 @@ private fun MorePage(
             }
         }
 
-        Text("Backup & data", color = White, fontSize = 17.sp,
+        Text("Backup & data", color = White, fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold)
         Card(colors = CardDefaults.cardColors(containerColor = Panel),
             modifier = Modifier.fillMaxWidth()) {
@@ -1632,6 +1619,12 @@ private fun MorePage(
                     color = Muted)
             }
         }
+        Text("External services", color = White, fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold)
+        MoreToolTile("Markets & portfolio", "Not connected · no live quotes", onMarkets)
+        MoreToolTile("Mobile banking",
+            "Not connected · no transfers or account balances", onBanking)
+
         TextButton(onClick = onResetAll) { Text("Reset everything on this device", color = Coral) }
     }
 }
@@ -1643,19 +1636,31 @@ private fun MoreToolTile(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Panel),
-        shape = RoundedCornerShape(15.dp)
+        shape = RoundedCornerShape(13.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .clickable(role = Role.Button, onClick = onOpen)
+                .padding(horizontal = 14.dp, vertical = 9.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
                 Text(title, color = White, fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp)
-                Text(description, color = Muted, fontSize = 11.sp)
+                    fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(description, color = Muted, fontSize = 12.sp, maxLines = 2,
+                    overflow = TextOverflow.Ellipsis)
             }
-            TextButton(onClick = onOpen) { Text("Open") }
+            Icon(
+                imageVector = Icons.Filled.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(19.dp),
+                tint = Aqua
+            )
         }
     }
 }
