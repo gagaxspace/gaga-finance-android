@@ -1,24 +1,30 @@
 # GaGa Finance Android implementation status
 
-Last reviewed: 2026-11-03
+Last reviewed: 2026-11-10
 
 ## Scope of the offline foundation (proposed PR)
 
 - Native Kotlin + Jetpack Compose application with five destinations.
 - Working categorized local manual income/expense entry; search and filter, in-place editing and deletion with confirmation.
 - Exact amounts stored as integer BDT minor units, not floating-point currency.
-- SQLite app-private persistence for manual records (survives app restarts). Non-destructive v1→v2→v3→v4 migrations preserve transactions and People Ledger data, adding separate planning tables.
+- SQLite app-private persistence for manual records (survives app restarts). Non-destructive v1→v2→v3→v4→v5 migrations preserve transactions and People Ledger data, adding separate planning tables.
 - Searchable People Ledger, lending/borrowing events, partial/full repayments, outstanding per-person balances, status (no activity/active/settled) and detailed history.
 - Repayment validation in the database transaction prevents overpayment and stores append-only event history. These records are not bank-confirmed and never initiate payments.
 - Monthly category budgets with real recorded-expense progress, over-budget alerts and recurring limits. Manually tracked savings goals with append-only addition/reduction events; savings values are not real-money balances.
 - CSV export of both plans and their savings history, in addition to separate transaction and People Ledger CSV files.
 - On-device Spending Insights: current-month income, expenses, net cashflow, category rankings, previous full calendar-month expense totals and budget warnings; no AI calls or financial-data uploads.
+- Screenshot-inspired editable People profiles with optional phone, email, address, relationship and notes, plus all-time People totals.
+- Separate loan contracts with strict due dates, simple interest estimates and principal repayment history; these are not silently double-counted in People Ledger.
+- Offline bill reminders with due/overdue/paid status and manual mark-paid; no background push alarms.
+- Overall monthly budget across all expense categories.
+- Complete versioned JSON export and transactional restore with pre-validation and typed-confirmation reset (local native format, not automatic web sync).
+- In-app Instructions and truthfully labeled unavailable Markets/Mobile Banking connections.
 - Current-month cashflow calculations from entered data.
 - Separate transaction and People Ledger CSV exports through Android's system document picker, with spreadsheet-formula escaping. CSV exports may contain personal information and must be stored securely.
 - Unit tests for parsing, cashflow and CSV export; GitHub Actions test/lint/debug APK pipeline.
 - No INTERNET permission, no financial provider SDK and no committed service credentials.
 
-This is a **personal bookkeeping prototype**, not a bank, wallet, remittance service, or investment platform. No displayed value is a bank-verified balance. The SQLite database is private to the Android app sandbox but **is not encrypted at rest**. Do not enter account credentials or other sensitive banking information. Backups are disabled and uninstalling/clearing app data can delete records permanently.
+This is a **personal bookkeeping prototype**, not a bank, wallet, remittance service, or investment platform. No displayed value is a bank-verified balance. The SQLite database is private to the Android app sandbox but **is not encrypted at rest**. Do not enter account credentials or other sensitive banking information. Automatic backups are disabled; native JSON export/restore exists, but backup files are plaintext. Uninstalling/clearing app data without an external backup can delete records permanently.
 
 ## Production blockers (not implemented)
 
@@ -29,8 +35,8 @@ This is a **personal bookkeeping prototype**, not a bank, wallet, remittance ser
 4. For any actual money movement: regulated provider partnership and legal assessment, verified identity as applicable, server-authoritative double-entry ledger, idempotent commands, payment reconciliation, fraud handling, refunds/reversals, audit logs, and dispute procedures.
 
 ### P1 — core bookkeeping product
-5. Budgets and goals now have local MVP screens; remaining enhancements include goal target editing, custom categories, people nickname editing, recurring entries, due dates/reminders and richer filters.
-6. Undo/recovery for deletion, historical date editing, and complete data portability.
+5. Additional work: recurring transactions and bills, system reminder scheduling, custom categories, goal editing, robust search, loan/People reconciliation, richer account settings, optional portfolio tracking.
+6. Undo/recovery for deletion, historical date editing, and a verified JSON cross-version restore pathway including optional web-data import mapping.
 7. Database schema migrations, test fixtures, full accessibility and small-screen QA.
 8. Optional authenticated encrypted sync and backup only after privacy/security review.
 
@@ -51,7 +57,12 @@ This is a **personal bookkeeping prototype**, not a bank, wallet, remittance ser
 - [ ] Verify Insights uses correct month boundaries, excludes income from spending categories and shows descriptive month-to-month results.
 - [ ] Verify monthly budget filters correctly reset by month and exclude income entries.
 - [ ] Create savings goals, add/reduce progress, restart app, inspect event history and over-withdrawal protection.
-- [ ] Verify v1/v2/v3→v4 migration on test devices without clearing local data.
+- [ ] Verify v1/v2/v3/v4→v5 migration on test devices without clearing local data.
+- [ ] Create/modify person contact profile and verify it persists.
+- [ ] Check Loans: due dates, invalid input, interest estimate, partial repayment and rejection above principal.
+- [ ] Check Bills: due/overdue/paid, mark/unmark and delete.
+- [ ] Check Summary All: gross vs repaid vs outstanding; protect against double counting.
+- [ ] Check backup JSON: export all, preview, confirmed restore, malicious/invalid file rollback, RESET confirmation.
 - [ ] Export all three CSV files and inspect contents, including formulas and escaped quotation marks.
 - [ ] Verify the development signing certificate is consistent across upgrade tests; GitHub-hosted debug keys may differ, so never uninstall an app containing records without exporting them first.
 - [ ] Test uninstall/clear-data warnings, rotation, TalkBack and long descriptions.
