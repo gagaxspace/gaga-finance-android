@@ -34,7 +34,7 @@ object DailyFocusMath {
     }.timeInMillis
 
     fun dateRange(start: Long, days: Int): Long {
-        require(days >= 1)
+        require(days != 0)
         return Calendar.getInstance().apply {
             timeInMillis = start
             add(Calendar.DAY_OF_YEAR, days)
