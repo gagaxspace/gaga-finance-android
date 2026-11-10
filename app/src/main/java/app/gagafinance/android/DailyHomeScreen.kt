@@ -255,8 +255,8 @@ private fun SmallStatistic(title: String, value: String, modifier: Modifier = Mo
             Text(title, color = HomeMuted, fontSize = 12.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis)
             Text(value, color = color, fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold, maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
+                fontWeight = FontWeight.SemiBold, maxLines = 2,
+                overflow = TextOverflow.Clip)
         }
     }
 }
