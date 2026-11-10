@@ -6,20 +6,20 @@ plugins {
 
 android {
     namespace = "app.gagafinance.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.gagafinance.android"
         minSdk = 23
-        targetSdk = 35
-        versionCode = 6
-        versionName = "0.6.0"
+        targetSdk = 36
+        versionCode = 7
+        versionName = "0.7.0"
         manifestPlaceholders["gagaAppLabel"] = "GaGa Finance"
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".preview06"
+            applicationIdSuffix = ".preview07"
             versionNameSuffix = "-preview"
             manifestPlaceholders["gagaAppLabel"] = "GaGa Finance Preview"
         }
@@ -56,6 +56,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.5")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
 
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
