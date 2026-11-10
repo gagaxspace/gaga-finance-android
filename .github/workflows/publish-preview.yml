@@ -38,13 +38,13 @@ jobs:
       - name: Publish downloadable public PREVIEW release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: gaga-finance-0.5.0-branded-preview.1
+          TAG: gaga-finance-0.6.0-daily-preview.1
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
-          cp app/build/outputs/apk/debug/app-debug.apk GaGaFinance-0.5.0-Branded-Preview.apk
-          sha256sum GaGaFinance-0.5.0-Branded-Preview.apk > SHA256SUMS.txt
-          gh release create "$TAG" GaGaFinance-0.5.0-Branded-Preview.apk SHA256SUMS.txt \
+          cp app/build/outputs/apk/debug/app-debug.apk GaGaFinance-0.6.0-Daily-Preview.apk
+          sha256sum GaGaFinance-0.6.0-Daily-Preview.apk > SHA256SUMS.txt
+          gh release create "$TAG" GaGaFinance-0.6.0-Daily-Preview.apk SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
-            --title "GaGa Finance 0.5.0 — Branded Android preview (offline testing only)" \
+            --title "GaGa Finance 0.6.0 — Daily Finance Android preview (offline testing only)" \
             --prerelease \
-            --notes "Branded GaGa Finance G/growth logo, launcher and splash. Offline preview APK for manual bookkeeping, People Ledger, loans, budgets, bill tracking and local backups. NOT a bank or production finance service. This preview uses a separate package ID, starts with an empty local database, and does not connect to web account data. Do not enter banking credentials or sensitive identification data. Local data is not encrypted at rest. Do not rely on this build for real-money transfers."
+            --notes "Daily dashboard with due/overdue alerts, quick income/expense recording, historic transaction dates, 7-day/month transaction filters, extra spending categories, cleaner settings layout, and existing GaGa branding. Local offline data only. In-app reminders do not create background notifications; no real banking, online sync, or verified balances. This separate preview installs with a new empty database. Protect previous finance records; don't uninstall earlier app versions without verified backup and restoration strategy. The database and exports are not encrypted. NOT for production money movement."
