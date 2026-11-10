@@ -1296,24 +1296,48 @@ private fun MorePage(
                 }
             }
         }
-        Text("Settings & data", color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text("You have " + count + " locally recorded transactions.", color = Muted)
-        Button(onClick = onPlanning) { Text("Budgets & savings goals") }
-        Button(onClick = onObligations) { Text("Loans & Borrow · Bill Reminders") }
-        Button(onClick = onMarkets) { Text("Markets & Portfolio · Not connected") }
-        Button(onClick = onBanking) { Text("Mobile Banking · Not connected") }
-        Button(onClick = onGuide) { Text("Instructions & Safety Guide") }
-        if (overdueBills > 0) {
-            Text(overdueBills.toString() + " overdue bill reminders",
-                color = Coral, fontSize = 12.sp)
-        }
-        Button(onClick = onExportJson) { Text("Export ALL data to JSON") }
-        Button(onClick = onImportJson) { Text("Import a GaGa Finance JSON backup") }
-        Button(onClick = onExport) { Text("Export transactions to CSV") }
-        Button(onClick = onExportPeople) { Text("Export People Ledger to CSV") }
-        Button(onClick = onExportPlanning) { Text("Export budgets & goals to CSV") }
-        Text("Exported files include personal and financial details in plaintext. Store securely.",
+        Text("Your finance tools", color = White,
+            fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(count.toString() + " transactions saved on this device",
             color = Muted, fontSize = 12.sp)
+        MoreToolTile("Budgets & savings goals",
+            "Monthly limits, goals and progress", onPlanning)
+        MoreToolTile(
+            "Loans & bill reminders",
+            if (overdueBills > 0)
+                overdueBills.toString() + " overdue bills · tap to review"
+            else "Track repayments, upcoming payments and due dates",
+            onObligations
+        )
+        MoreToolTile("Instructions & safety guide",
+            "Learn how to use the app and protect your data", onGuide)
+
+        Text("External services", color = White, fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold)
+        MoreToolTile("Markets & portfolio", "Not connected · no live quotes", onMarkets)
+        MoreToolTile("Mobile banking",
+            "Not connected · no transfers or account balances", onBanking)
+
+        Text("Backup & data", color = White, fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold)
+        Card(colors = CardDefaults.cardColors(containerColor = Panel),
+            modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Protect your records", color = White, fontWeight = FontWeight.Bold)
+                Text("Full JSON backup can be restored to a compatible version. " +
+                    "CSV exports are for viewing, not restoring.",
+                    color = Muted, fontSize = 12.sp)
+                Button(onClick = onExportJson) { Text("Export complete JSON backup") }
+                Button(onClick = onImportJson) { Text("Restore native JSON backup") }
+                Text("Export selected records", color = Muted, fontSize = 12.sp)
+                TextButton(onClick = onExport) { Text("Transactions CSV") }
+                TextButton(onClick = onExportPeople) { Text("People Ledger CSV") }
+                TextButton(onClick = onExportPlanning) { Text("Budgets & goals CSV") }
+            }
+        }
+        Text("Export files are not encrypted. Store them securely.",
+            color = Coral, fontSize = 12.sp)
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("Privacy and limitations", color = White, fontWeight = FontWeight.Bold)
@@ -1326,6 +1350,30 @@ private fun MorePage(
             }
         }
         TextButton(onClick = onResetAll) { Text("Reset everything on this device", color = Coral) }
+    }
+}
+
+@Composable
+private fun MoreToolTile(
+    title: String, description: String, onOpen: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Panel),
+        shape = RoundedCornerShape(15.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, color = White, fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp)
+                Text(description, color = Muted, fontSize = 11.sp)
+            }
+            TextButton(onClick = onOpen) { Text("Open") }
+        }
     }
 }
 
