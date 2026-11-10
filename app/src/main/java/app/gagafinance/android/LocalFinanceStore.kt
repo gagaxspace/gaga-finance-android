@@ -669,5 +669,13 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         ) == 1
     }
 
+    fun exportJson(): String = LocalBackup.export(readableDatabase)
+
+    fun previewImport(raw: String): BackupPreview = LocalBackup.preview(raw)
+
+    fun restoreJson(raw: String) = LocalBackup.restore(writableDatabase, raw)
+
+    fun clearAllRecords() = LocalBackup.clearAll(writableDatabase)
+
     companion object { private const val DATABASE_VERSION = 5 }
 }
