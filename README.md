@@ -1,38 +1,75 @@
 # GaGa Finance Android
 
-Native Android project for GaGa Finance, built with Kotlin and Jetpack Compose.
+Standalone native Android project for GaGa Finance, using Kotlin and Jetpack Compose.
 
-## Project status
+## Development status
 
-This repository is being initialized as a clean native Android codebase. The first milestone establishes the app shell, visual design system, navigation, and build configuration. It is **not yet a production financial application**.
+**Not a production financial service.** This project now has a local manual-bookkeeping foundation on a review branch. It does not connect to banks, move money, pay bills, manage crypto, create custodial balances or provide investment advice.
 
-Until server-side services and licensed payment integrations are implemented and tested, all financial data must be treated as sample/demo data. Do not use the client app as an authoritative ledger or store secrets in the APK.
+### Available in the offline foundation
+- Home dashboard with monthly income, expenses and net cashflow derived from local entries.
+- Add and view categorized manual BDT income/expense entries, search and filter history, edit entries and delete with confirmation.
+- Private app-sandbox SQLite storage across restarts (not encrypted at rest). Non-destructive migrations from v1/v2/v3/v4 to v5 preserve earlier finance records and People Ledger history.
+- Export separate transaction and People Ledger CSV files through Android's document picker, without broad storage permission.
+- Searchable **People Ledger** with named contacts, amounts lent and borrowed, partial/full repayments, per-person statuses and detailed history. No actual transfers occur.
+- Local **Budgets & Goals** screens reached through Home or More: recurring monthly category limits, spending progress and overspending notices calculated from actual manual expense entries, goal targets and manually recorded additions/withdrawals.
+- Separate CSV exports for transactions, people and budget/goal records (including savings history).
+- Offline **Spending Insights** tab shows category spending, month-to-date cashflow, previous full month's expenses and budget alerts without third-party AI or network permissions.
+- **Person details and all-time summary:** optional phone, email, address, relationship and notes, plus gross/returned/outstanding figures.
+- **Loans & Borrow:** separate dated manual loan plans, annual simple-interest estimate, repayment entry, due/overdue/settled statuses.
+- **Bill Reminders:** create due dates, inspect pending/overdue, mark paid/unpaid, and delete. No scheduled system notifications yet.
+- **Overall budget:** one limit spanning all expense categories, alongside category budgets.
+- **Complete JSON backup/restore:** all local records export to one versioned JSON file; import previews counts and uses an atomic transaction with validation; reset requires typing RESET.
+- **Instructions** and explicit Markets/Mobile Banking provider-status pages.
+- AI/cloud services remain disabled until a privacy-reviewed integration exists.
+- Unit tests, Android lint and automated debug APK builds.
+
+**Important:** All three manual CSV exports may include personal or financial details; store them securely. The JSON export is a supported manual local backup for this native version; CSV files remain exports without import. These files are not encrypted and are not automatically synchronized. People Ledger amounts and statuses are locally recorded by the user; they are not bank-verified debts. Values are user-entered bookkeeping records, *not verified bank or wallet balances*. There is no login or automatic cloud backup. If you uninstall/clear app data, records may be permanently lost. Do not enter banking passwords, identity documents or financial secrets.
 
 ## Requirements
 
-- Android Studio (recent stable release)
+- Android Studio recent stable version
 - JDK 17
 - Android SDK 35
 
-## Build
+## Build and test
 
-Open this repository in Android Studio and allow Gradle sync, then run the `app` configuration on an emulator or device.
+Open the repository in Android Studio, sync Gradle and run the app configuration.
 
-## Configuration and security
+With Gradle installed, from the repository root:
 
-- No Firebase project credentials or payment-provider secrets are committed.
-- Add environment-specific configuration only through secure local configuration or a trusted backend.
-- Never embed service-account JSON, private keys, or payment secrets in the Android app.
-- Firebase Spark-compatible services should be preferred unless a billing upgrade is explicitly approved.
+    gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
-## Planned implementation milestones
+For downloadable debug artifacts, use the Actions workflow run for a successful commit or pull request. Debug APKs use a separate .debug application ID and are not a signed production release.
 
-1. Native app shell, theme, dashboard and navigation.
-2. Transactions, budgets, savings goals and people screens.
-3. Local persistence and repository abstractions.
-4. Authentication and backend integration.
-5. Server-authoritative ledger, audit trail and transaction safeguards.
-6. Payment-provider integration, only after provider credentials, compliance and settlement flows are verified.
-7. Automated Android build, tests and signed release process.
+**Safe preview install:** Version 0.4.0 debug uses package `app.gagafinance.android.preview04`, labeled **GaGa Finance Preview**. It installs separately from earlier `.debug` builds and starts with its own empty local database. It does not migrate or synchronize the old app's records. **Upgrade warning:** GitHub-hosted debug APKs may be signed with different temporary debug keys. Updating a previously installed debug APK can fail with a signature mismatch. Never uninstall an existing installation containing important data before exporting a complete JSON backup; uninstalling can delete all local records. A stable signing strategy is required before reliable upgrades can be tested.
 
-See `docs/IMPLEMENTATION_STATUS.md` for the current implementation boundary.
+## Security and configuration
+
+- Do **not** commit Firebase Admin credentials, payment secrets, private keys, customer data or a release keystore.
+- No bank/payment provider is integrated. Do not use the Android app as an authoritative ledger.
+- No Android Internet permission is currently requested.
+- Only implement actual money movement with a trusted backend and appropriate licensed provider/partner, fraud protection, reconciliation, compliance and auditable server-side ledger.
+- No Firebase billing upgrade or paid service should be enabled without approval.
+
+See [implementation and remaining blockers](docs/IMPLEMENTATION_STATUS.md), plus the [screenshot feature-parity audit](docs/SCREENSHOT_PARITY.md). The Firebase-hosted web app is a separate data source; screenshots and web exports do not automatically populate this Android app.
+
+## GaGa Finance branding: version 0.5.0
+
+- Launcher icon: the user's selected navy/aqua G and growth-bars emblem, optimized for Android.
+- Splash: branded launch imagery on pre-Android-12 devices and Android 12+ system splash icon.
+- Global navigation: consistent branded app bar; the More screen shows the GaGa Finance logo and version.
+- Install isolation: 0.5.0 debug uses `app.gagafinance.android.preview05`. It is a **separate preview app** from 0.4.0; it does **not** automatically migrate or sync data. A compatible native JSON backup must be explicitly selected and restored if desired.
+- Public GitHub prerelease builds are **testing-only**. A consistent release signing key, encryption-at-rest review, device QA and a Play Store release AAB remain outstanding.
+
+The generated full-resolution logo artwork remains separately available as a design asset. The Android repository contains an optimized launcher resource of that actual logo.
+
+## Version 0.7.0: daily utility and Google Play preparation (November 2026)
+
+**Added to the development PR:** API 36 target/AGP 8.13.2, permission-based daily WorkManager alerts for bills/loan plans (approximate, not exact), user-selected password-encrypted AES-GCM JSON backup with confirmed native restore, and organized Settings controls. Existing offline Today, people, expenses, budgets, goals, insights and bill/loan records remain. Unit tests cover basic password policy. No server or payment integration was added.
+
+The default **release** application ID is `app.gagafinance.android`; the separate debug test package is `app.gagafinance.android.preview07`. They do not share SQLite records. **Do not uninstall old installs containing records.** Restore is manual from a supported native backup. No database encryption at rest or automatic cloud sync is claimed.
+
+A guarded `play-bundle.yml` workflow can build a privately signed Google Play AAB after the owner configures a **dedicated stable upload key** in GitHub Actions repository secrets. Missing signing credentials mean a production AAB has not been produced. See [Play Store checklist](docs/PLAY_RELEASE_CHECKLIST.md) and [privacy policy draft](docs/privacy.html).
+
+The public GitHub prerelease is for manual offline feature testing. **Do not provide NID, banking credentials or financial account passwords**. Actual money movement is intentionally not implemented. A complete real-device verification and production security review remain required.

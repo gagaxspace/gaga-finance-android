@@ -1,0 +1,54 @@
+name: Publish Android preview APK
+
+on:
+  push:
+    branches:
+      - improve/offline-finance-foundation-20261103
+    paths:
+      - .github/workflows/publish-preview.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gaga-finance-preview-publish
+  cancel-in-progress: false
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Install Android API 36
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null || true
+
+      - name: Verify unit tests, lint, and build APK
+        run: |
+          gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --stacktrace
+
+      - name: Publish downloadable public PREVIEW release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: gaga-finance-0.8.0-ui-refresh-preview.2
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk GaGaFinance-0.8.0-UI-Refresh-Preview.apk
+          sha256sum GaGaFinance-0.8.0-UI-Refresh-Preview.apk > SHA256SUMS.txt
+          gh release create "$TAG" GaGaFinance-0.8.0-UI-Refresh-Preview.apk SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "GaGa Finance 0.8.0 — Safe Insets & Compact UI Android preview 2 (offline testing only)" \
+            --prerelease \
+            --notes "GaGa Finance UI refresh for user-shared Android screenshots: Android 16 safe-area/notch correction, compact branded top header, accessible 58dp bottom navigation, shorter cards and consistent text contrast/spacing across Today, People, Insights, Loans, Budgets and More. Offline bookkeeping and opt-in daily reminders preserved. PREVIEW ONLY: new preview08 test package has separate empty database; no automatic data migration or production signing. Real device screen QA is still required, and database is not independently encrypted."

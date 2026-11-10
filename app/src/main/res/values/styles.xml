@@ -2,6 +2,7 @@
 <resources>
     <style name="Theme.GaGaFinance" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
+        <item name="android:windowBackground">@drawable/gaga_brand_launch</item>
         <item name="android:colorAccent">#35D6C5</item>
         <item name="android:statusBarColor">#0B1424</item>
         <item name="android:navigationBarColor">#0B1424</item>
