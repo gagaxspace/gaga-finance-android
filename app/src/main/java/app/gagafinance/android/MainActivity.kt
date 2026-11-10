@@ -1,6 +1,10 @@
 package app.gagafinance.android
 
 import android.os.Bundle
+import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -48,6 +52,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
@@ -66,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -136,6 +142,14 @@ private fun GaGaFinanceApp() {
     var importPreview by remember { mutableStateOf<BackupPreview?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
     var resetPhrase by remember { mutableStateOf("") }
+    var showProtectExport by remember { mutableStateOf(false) }
+    var exportPassphrase by remember { mutableStateOf("") }
+    var exportPassphraseConfirm by remember { mutableStateOf("") }
+    var pendingExportPassphrase by remember { mutableStateOf<String?>(null) }
+    var encryptedImportRaw by remember { mutableStateOf<String?>(null) }
+    var importPassphrase by remember { mutableStateOf("") }
+    var showEncryptedImport by remember { mutableStateOf(false) }
+    var reminderEnabled by remember { mutableStateOf(FinanceReminderSettings.isEnabled(context)) }
     var plannerOpen by rememberSaveable { mutableStateOf(false) }
     var budgetDialogOpen by remember { mutableStateOf(false) }
     var editingBudget by remember { mutableStateOf<MonthlyBudget?>(null) }
@@ -264,16 +278,18 @@ private fun GaGaFinanceApp() {
     val jsonExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        if (uri != null) {
+        val password = pendingExportPassphrase
+        pendingExportPassphrase = null
+        if (uri != null && password != null) {
             scope.launch {
                 try {
                     withContext(Dispatchers.IO) {
-                        val backup = store.exportJson()
+                        val backup = ProtectedBackup.encrypt(store.exportJson(), password)
                         val stream = context.contentResolver.openOutputStream(uri)
                             ?: error("Cannot write chosen document")
                         stream.bufferedWriter(Charsets.UTF_8).use { it.write(backup) }
                     }
-                    snackbar.showSnackbar("Full local JSON backup exported. Store securely.")
+                    snackbar.showSnackbar("Encrypted backup saved. Keep your password safe.")
                 } catch (_: Exception) {
                     snackbar.showSnackbar("Backup export failed.")
                 }
@@ -294,7 +310,7 @@ private fun GaGaFinanceApp() {
                             while (true) {
                                 val n = stream.read(buffer)
                                 if (n < 0) break
-                                require(output.size() + n <= 8_000_000) {
+                                require(output.size() + n <= 12_000_000) {
                                     "Backup too large"
                                 }
                                 output.write(buffer, 0, n)
@@ -302,15 +318,38 @@ private fun GaGaFinanceApp() {
                             output.toString(Charsets.UTF_8.name())
                         } ?: error("Cannot read chosen file")
                     }
-                    val preview = withContext(Dispatchers.Default) {
-                        store.previewImport(candidate)
+                    if (ProtectedBackup.isProtected(candidate)) {
+                        encryptedImportRaw = candidate
+                        importPassphrase = ""
+                        showEncryptedImport = true
+                    } else {
+                        // Legacy unencrypted native backups remain importable with confirmation.
+                        val preview = withContext(Dispatchers.Default) {
+                            store.previewImport(candidate)
+                        }
+                        importCandidate = candidate
+                        importPreview = preview
                     }
-                    importCandidate = candidate
-                    importPreview = preview
                 } catch (e: Exception) {
                     snackbar.showSnackbar("Invalid backup: " + (e.message ?: "unsupported file"))
                 }
             }
+        }
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            try {
+                FinanceReminderSettings.update(context, true)
+                reminderEnabled = true
+            } catch (_: Exception) {
+                scope.launch { snackbar.showSnackbar("Unable to schedule reminders.") }
+            }
+        } else {
+            reminderEnabled = false
+            scope.launch { snackbar.showSnackbar("Notification permission was not granted.") }
         }
     }
 
@@ -458,7 +497,33 @@ private fun GaGaFinanceApp() {
                     onMarkets = { plannerOpen = false; hubRoute = "markets" },
                     onBanking = { plannerOpen = false; hubRoute = "banking" },
                     onExportJson = {
-                        jsonExportLauncher.launch("gaga-finance-complete-backup.json")
+                        exportPassphrase = ""
+                        exportPassphraseConfirm = ""
+                        showProtectExport = true
+                    },
+                    reminderEnabled = reminderEnabled,
+                    onReminderChange = { enable ->
+                        if (!enable) {
+                            FinanceReminderSettings.update(context, false)
+                            reminderEnabled = false
+                        } else if (Build.VERSION.SDK_INT >= 33 &&
+                            ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.POST_NOTIFICATIONS
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            notificationPermissionLauncher.launch(
+                                Manifest.permission.POST_NOTIFICATIONS
+                            )
+                        } else {
+                            try {
+                                FinanceReminderSettings.update(context, true)
+                                reminderEnabled = true
+                            } catch (_: Exception) {
+                                scope.launch {
+                                    snackbar.showSnackbar("Allow notifications in system Settings.")
+                                }
+                            }
+                        }
                     },
                     onImportJson = { jsonImportLauncher.launch(arrayOf("*/*")) },
                     onResetAll = { resetPhrase = ""; confirmReset = true },
@@ -467,6 +532,115 @@ private fun GaGaFinanceApp() {
                     }
                 )
             }
+        }
+
+        if (showProtectExport) {
+            AlertDialog(
+                onDismissRequest = { if (!isSaving) {
+                    showProtectExport = false
+                    exportPassphrase = ""
+                    exportPassphraseConfirm = ""
+                } },
+                title = { Text("Protect your backup") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Choose a unique backup password with at least 12 characters, " +
+                            "including letters and numbers. Losing it means losing this backup.")
+                        OutlinedTextField(
+                            value = exportPassphrase,
+                            onValueChange = { exportPassphrase = it.take(128) },
+                            label = { Text("Backup password") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = exportPassphraseConfirm,
+                            onValueChange = { exportPassphraseConfirm = it.take(128) },
+                            label = { Text("Confirm password") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true
+                        )
+                        Text("Your password is not stored by the app.",
+                            color = Muted, fontSize = 12.sp)
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        enabled = BackupPasswordPolicy.valid(exportPassphrase) &&
+                            exportPassphrase == exportPassphraseConfirm && !isSaving,
+                        onClick = {
+                            pendingExportPassphrase = exportPassphrase
+                            exportPassphrase = ""
+                            exportPassphraseConfirm = ""
+                            showProtectExport = false
+                            jsonExportLauncher.launch("gaga-finance-encrypted-backup.json")
+                        }
+                    ) { Text("Choose backup location") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showProtectExport = false
+                        exportPassphrase = ""
+                        exportPassphraseConfirm = ""
+                    }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showEncryptedImport) {
+            AlertDialog(
+                onDismissRequest = { if (!isSaving) {
+                    showEncryptedImport = false
+                    encryptedImportRaw = null
+                    importPassphrase = ""
+                } },
+                title = { Text("Unlock encrypted backup") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text("Enter the password used when this backup was created.")
+                        OutlinedTextField(
+                            value = importPassphrase,
+                            onValueChange = { importPassphrase = it.take(128) },
+                            label = { Text("Backup password") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(enabled = !isSaving && importPassphrase.isNotEmpty(),
+                        onClick = {
+                            val file = encryptedImportRaw ?: return@Button
+                            val password = importPassphrase
+                            importPassphrase = ""
+                            isSaving = true
+                            scope.launch {
+                                try {
+                                    val restoredPlaintext = withContext(Dispatchers.Default) {
+                                        ProtectedBackup.decrypt(file, password)
+                                    }
+                                    val preview = withContext(Dispatchers.Default) {
+                                        store.previewImport(restoredPlaintext)
+                                    }
+                                    showEncryptedImport = false
+                                    encryptedImportRaw = null
+                                    importCandidate = restoredPlaintext
+                                    importPreview = preview
+                                } catch (_: Exception) {
+                                    snackbar.showSnackbar(
+                                        "Incorrect password or damaged backup."
+                                    )
+                                } finally { isSaving = false }
+                            }
+                        }) { Text(if (isSaving) "Unlocking…" else "Unlock and preview") }
+                },
+                dismissButton = {
+                    TextButton(enabled = !isSaving, onClick = {
+                        showEncryptedImport = false
+                        encryptedImportRaw = null
+                        importPassphrase = ""
+                    }) { Text("Cancel") }
+                }
+            )
         }
 
         importPreview?.let { preview ->
@@ -1268,6 +1442,7 @@ private fun MorePage(
     onExportPlanning: () -> Unit, onPlanning: () -> Unit,
     onObligations: () -> Unit, overdueBills: Int,
     onExportJson: () -> Unit, onImportJson: () -> Unit,
+    reminderEnabled: Boolean, onReminderChange: (Boolean) -> Unit,
     onResetAll: () -> Unit,
     onGuide: () -> Unit, onMarkets: () -> Unit, onBanking: () -> Unit
 ) {
@@ -1292,7 +1467,7 @@ private fun MorePage(
                     Text("GaGa Finance", color = White,
                         fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     Text("Smart Finance Hub", color = Aqua, fontSize = 13.sp)
-                    Text("Version 0.6.0 · Offline preview", color = Muted, fontSize = 11.sp)
+                    Text("Version 0.7.0 · Offline preview", color = Muted, fontSize = 11.sp)
                 }
             }
         }
@@ -1318,6 +1493,32 @@ private fun MorePage(
         MoreToolTile("Mobile banking",
             "Not connected · no transfers or account balances", onBanking)
 
+        Text("Reminders", color = White, fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Panel)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Column(Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Daily due-date notifications", color = White,
+                        fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Optional Android reminders for due bills and loan plans. " +
+                            "Usually checked around 9 AM, not exact or guaranteed. " +
+                            "No personal names on lockscreen.",
+                        color = Muted, fontSize = 12.sp
+                    )
+                }
+                Switch(checked = reminderEnabled, onCheckedChange = onReminderChange)
+            }
+        }
+
         Text("Backup & data", color = White, fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold)
         Card(colors = CardDefaults.cardColors(containerColor = Panel),
@@ -1325,23 +1526,24 @@ private fun MorePage(
             Column(Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Protect your records", color = White, fontWeight = FontWeight.Bold)
-                Text("Full JSON backup can be restored to a compatible version. " +
-                    "CSV exports are for viewing, not restoring.",
+                Text("Encrypted password-protected JSON backup is recommended. " +
+                    "Older unencrypted native backups may still be imported. " +
+                    "CSV cannot be restored.",
                     color = Muted, fontSize = 12.sp)
-                Button(onClick = onExportJson) { Text("Export complete JSON backup") }
-                Button(onClick = onImportJson) { Text("Restore native JSON backup") }
+                Button(onClick = onExportJson) { Text("Export encrypted JSON backup") }
+                Button(onClick = onImportJson) { Text("Restore JSON backup") }
                 Text("Export selected records", color = Muted, fontSize = 12.sp)
                 TextButton(onClick = onExport) { Text("Transactions CSV") }
                 TextButton(onClick = onExportPeople) { Text("People Ledger CSV") }
                 TextButton(onClick = onExportPlanning) { Text("Budgets & goals CSV") }
             }
         }
-        Text("Export files are not encrypted. Store them securely.",
+        Text("CSV exports remain unencrypted. Keep encrypted backup passwords safe.",
             color = Coral, fontSize = 12.sp)
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("Privacy and limitations", color = White, fontWeight = FontWeight.Bold)
-                Text("Records stay on this device. No login, automatic cloud sync, or account recovery. Manual JSON backup/restore is available.",
+                Text("Records stay on this device. No login or cloud sync. Password-encrypted JSON export and confirmed restore are available.",
                     color = Muted)
                 Text("Uninstalling or clearing app data can erase records. Export a compatible JSON backup first; CSV files cannot be imported.",
                     color = Muted)
