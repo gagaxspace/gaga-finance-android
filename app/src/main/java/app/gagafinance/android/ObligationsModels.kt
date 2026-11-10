@@ -42,7 +42,7 @@ object FinanceDates {
 
     fun parseDate(text: String): Long? =
         if (!Regex("""\d{4}-\d{2}-\d{2}""").matches(text.trim())) null
-        else formatter().parse(text.trim())?.time
+        else try { formatter().parse(text.trim())?.time } catch (_: Exception) { null }
 
     fun formatDate(millis: Long): String = formatter().format(Date(millis))
 
