@@ -6,10 +6,14 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -20,8 +24,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -69,6 +76,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -88,7 +97,7 @@ private val Navy = Color(0xFF0B1424)
 private val Panel = Color(0xFF142238)
 private val PanelSoft = Color(0xFF1A2B43)
 private val Aqua = Color(0xFF35D6C5)
-private val Muted = Color(0xFFB7C5D7)
+private val Muted = Color(0xFFC9D6E4)
 private val White = Color(0xFFF4F7FB)
 private val Coral = Color(0xFFFFB4A9)
 private val FinanceTheme = darkColorScheme(
@@ -99,6 +108,10 @@ private val FinanceTheme = darkColorScheme(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         setContent { GaGaFinanceApp() }
     }
 }
@@ -367,23 +380,17 @@ private fun GaGaFinanceApp() {
             topBar = { GaGaFinanceBrandBar() },
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
-                NavigationBar(containerColor = Panel) {
-                    destinations.forEachIndexed { index, destination ->
-                        NavigationBarItem(
-                            selected = selected == index,
-                            onClick = {
-                                if (selected != index || index == 4) {
-                                    hubRoute = ""
-                                    plannerOpen = false
-                                }
-                                selected = index
-                            },
-                            icon = { Icon(destination.icon, contentDescription = null) },
-                            label = { Text(destination.label) },
-                            alwaysShowLabel = true
-                        )
+                CompactFinanceBottomBar(
+                    destinations = destinations,
+                    selected = selected,
+                    onSelect = { index ->
+                        if (selected != index || index == 4) {
+                            hubRoute = ""
+                            plannerOpen = false
+                        }
+                        selected = index
                     }
-                }
+                )
             }
         ) { padding ->
             val page = Modifier.fillMaxSize().padding(padding)
@@ -1164,25 +1171,99 @@ private fun HomePage(
 
 @Composable
 private fun GaGaFinanceBrandBar() {
-    Surface(color = Panel) {
+    // Android 15/16 edge-to-edge: reserve the actual status/cutout inset.
+    // Never hardcode an offset for the clock or camera island.
+    Surface(color = Panel, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 7.dp),
+                .statusBarsPadding()
+                .heightIn(min = 54.dp)
+                .padding(horizontal = 16.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
                 painter = painterResource(R.drawable.gaga_brand_icon),
                 contentDescription = "GaGa Finance logo",
-                modifier = Modifier.size(42.dp)
+                modifier = Modifier.size(34.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text("GaGa Finance", color = White, fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold)
-                Text("Smart Finance Hub · Offline", color = Muted, fontSize = 11.sp)
+                Text(
+                    "GaGa Finance", color = White, fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    "Personal finance · Offline", color = Muted, fontSize = 11.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
             }
-            Text("PREVIEW", color = Aqua,
-                fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+            Text(
+                "PREVIEW", color = Aqua, fontWeight = FontWeight.SemiBold,
+                fontSize = 10.sp, maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactFinanceBottomBar(
+    destinations: List<Destination>,
+    selected: Int,
+    onSelect: (Int) -> Unit
+) {
+    // Compact 56dp touch targets while preserving Android gesture/navigation inset.
+    Surface(color = Panel, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.navigationBarsPadding()) {
+            Spacer(
+                modifier = Modifier.fillMaxWidth().height(1.dp)
+                    .background(Color(0xFF2A3B55))
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                destinations.forEachIndexed { index, destination ->
+                    val active = selected == index
+                    Column(
+                        modifier = Modifier.weight(1f)
+                            .heightIn(min = 58.dp)
+                            .selectable(
+                                selected = active,
+                                role = Role.Tab,
+                                onClick = { onSelect(index) }
+                            )
+                            .padding(top = 5.dp, bottom = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 44.dp, height = 27.dp)
+                                .background(
+                                    if (active) Color(0xFF21443F) else Color.Transparent,
+                                    RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = destination.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(21.dp),
+                                tint = if (active) Aqua else Muted
+                            )
+                        }
+                        Text(
+                            destination.label,
+                            color = if (active) Aqua else Muted,
+                            fontSize = 11.sp, fontWeight = if (active)
+                                FontWeight.SemiBold else FontWeight.Normal,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         }
     }
 }
