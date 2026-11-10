@@ -26,7 +26,7 @@ import java.util.Locale
 private val InsightNavy = Color(0xFF0B1424)
 private val InsightPanel = Color(0xFF142238)
 private val InsightAqua = Color(0xFF35D6C5)
-private val InsightMuted = Color(0xFFB7C5D7)
+private val InsightMuted = Color(0xFFC9D6E4)
 private val InsightText = Color(0xFFF4F7FB)
 private val InsightWarning = Color(0xFFFFB4A9)
 
@@ -43,13 +43,12 @@ fun InsightsPage(
     val maxCategory = insight.categoryExpenses.firstOrNull()?.second ?: 0L
     LazyColumn(
         modifier.background(InsightNavy),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("GaGa Finance", color = InsightAqua, fontWeight = FontWeight.Bold)
-                Text("Spending Insights", fontSize = 25.sp,
+                Text("Spending Insights", fontSize = 23.sp,
                     fontWeight = FontWeight.Bold, color = InsightText)
                 Text("Private, device-only summaries · not AI advice",
                     color = InsightMuted, fontSize = 12.sp)
@@ -76,7 +75,7 @@ fun InsightsPage(
                     )
                     Text(
                         "The current month is incomplete; comparison is descriptive only.",
-                        color = InsightMuted, fontSize = 11.sp
+                        color = InsightMuted, fontSize = 12.sp
                     )
                 }
             }
@@ -147,7 +146,7 @@ fun InsightsPage(
                 Button(onClick = onManageBudgets) { Text("Manage budgets & goals") }
                 Text(
                     "These insights come only from your manual entries, not verified accounts.",
-                    color = InsightMuted, fontSize = 11.sp
+                    color = InsightMuted, fontSize = 12.sp
                 )
             }
         }
