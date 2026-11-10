@@ -32,6 +32,7 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         )
         db.execSQL("CREATE INDEX entries_by_created_at ON entries(created_at DESC, id DESC)")
         createPeopleTables(db)
+        addPeopleContactColumns(db)
         createPlanningTables(db)
         createExtrasTables(db)
     }
@@ -102,6 +103,13 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         )
     }
 
+    private fun addPeopleContactColumns(db: SQLiteDatabase) {
+        db.execSQL("ALTER TABLE ledger_people ADD COLUMN phone TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE ledger_people ADD COLUMN email TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE ledger_people ADD COLUMN address TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE ledger_people ADD COLUMN relation TEXT NOT NULL DEFAULT ''")
+    }
+
     private fun createExtrasTables(db: SQLiteDatabase) {
         db.execSQL(
             """
@@ -162,10 +170,7 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
             createPlanningTables(db)
         }
         if (oldVersion < 5) {
-            db.execSQL("ALTER TABLE ledger_people ADD COLUMN phone TEXT NOT NULL DEFAULT ''")
-            db.execSQL("ALTER TABLE ledger_people ADD COLUMN email TEXT NOT NULL DEFAULT ''")
-            db.execSQL("ALTER TABLE ledger_people ADD COLUMN address TEXT NOT NULL DEFAULT ''")
-            db.execSQL("ALTER TABLE ledger_people ADD COLUMN relation TEXT NOT NULL DEFAULT ''")
+            addPeopleContactColumns(db)
             createExtrasTables(db)
         }
     }
