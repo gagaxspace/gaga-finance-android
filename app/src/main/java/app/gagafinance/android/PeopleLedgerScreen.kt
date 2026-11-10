@@ -44,7 +44,7 @@ private val LedgerNavy = Color(0xFF0B1424)
 private val LedgerPanel = Color(0xFF142238)
 private val LedgerSoft = Color(0xFF1A2B43)
 private val LedgerAqua = Color(0xFF35D6C5)
-private val LedgerMuted = Color(0xFFB7C5D7)
+private val LedgerMuted = Color(0xFFC9D6E4)
 private val LedgerWhite = Color(0xFFF4F7FB)
 
 @Composable
@@ -88,14 +88,12 @@ fun PeopleLedgerPage(
     val total = DebtMath.total(balances.values)
     LazyColumn(
         modifier.background(LedgerNavy),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("GaGa Finance", color = LedgerAqua, fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold)
-                Text("People Ledger", color = LedgerWhite, fontSize = 25.sp,
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("People Ledger", color = LedgerWhite, fontSize = 23.sp,
                     fontWeight = FontWeight.Bold)
                 Text("Track money lent and borrowed. Local records only.",
                     color = LedgerMuted, fontSize = 12.sp)
@@ -139,7 +137,7 @@ fun PeopleLedgerPage(
         }
         item {
             Text("Manual ledger only · No bank transfers or contact sync",
-                color = LedgerMuted, fontSize = 11.sp)
+                color = LedgerMuted, fontSize = 12.sp)
         }
     }
 }
@@ -151,7 +149,7 @@ private fun BalanceBox(title: String, amount: Long, modifier: Modifier = Modifie
         colors = CardDefaults.cardColors(containerColor = LedgerPanel)
     ) {
         Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, fontSize = 10.sp, color = LedgerMuted, fontWeight = FontWeight.SemiBold)
+            Text(title, fontSize = 12.sp, color = LedgerMuted, fontWeight = FontWeight.SemiBold)
             Text(Money.formatBDT(amount), fontSize = 17.sp, color = LedgerWhite,
                 fontWeight = FontWeight.Bold, maxLines = 2)
         }
@@ -164,16 +162,16 @@ private fun PersonLedgerCard(
 ) {
     Card(
         onClick = onOpen, modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = LedgerPanel)
     ) {
-        Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Surface(color = LedgerSoft, shape = RoundedCornerShape(13.dp),
-                    modifier = Modifier.size(46.dp)) {
+                    modifier = Modifier.size(42.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center) {
                         val initials = person.name.trim().split(Regex("\\s+")).take(2)
@@ -186,22 +184,22 @@ private fun PersonLedgerCard(
                         fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     if (person.note.isNotEmpty()) {
                         Text(person.note, color = LedgerMuted,
-                            fontSize = 11.sp, maxLines = 1)
+                            fontSize = 12.sp, maxLines = 1)
                     }
                 }
                 Surface(color = LedgerSoft, shape = RoundedCornerShape(25.dp)) {
-                    Text(balance.status, color = LedgerAqua, fontSize = 11.sp,
+                    Text(balance.status, color = LedgerAqua, fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
-                    Text("LENT / DUE", color = LedgerMuted, fontSize = 10.sp)
+                    Text("LENT / DUE", color = LedgerMuted, fontSize = 12.sp)
                     Text(Money.formatBDT(balance.lentOutstanding), color = LedgerWhite,
                         fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text("BORROWED / DUE", color = LedgerMuted, fontSize = 10.sp)
+                    Text("BORROWED / DUE", color = LedgerMuted, fontSize = 12.sp)
                     Text(Money.formatBDT(balance.borrowedOutstanding), color = LedgerWhite,
                         fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
@@ -222,11 +220,11 @@ private fun PersonHistoryPage(
     }
     LazyColumn(
         modifier.background(LedgerNavy),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 TextButton(onClick = onBack) { Text("‹ Back to People") }
                 Text(person.name, color = LedgerWhite, fontSize = 25.sp,
                     fontWeight = FontWeight.Bold)
@@ -278,7 +276,7 @@ private fun PersonHistoryPage(
                         Text(
                             SimpleDateFormat("dd MMM yyyy · HH:mm", Locale.getDefault())
                                 .format(Date(event.createdAt)),
-                            color = LedgerMuted, fontSize = 11.sp
+                            color = LedgerMuted, fontSize = 12.sp
                         )
                         if (event.note.isNotBlank()) {
                             Text(event.note, color = LedgerMuted, fontSize = 12.sp)
@@ -289,7 +287,7 @@ private fun PersonHistoryPage(
         }
         item {
             Text("Your own records, not bank-verified statements.",
-                color = LedgerMuted, fontSize = 11.sp)
+                color = LedgerMuted, fontSize = 12.sp)
         }
     }
 }
@@ -361,7 +359,7 @@ fun RecordDebtDialog(
                         FilterChip(
                             selected = kind == option,
                             onClick = { kindName = option.name },
-                            label = { Text(option.label, fontSize = 11.sp) }
+                            label = { Text(option.label, fontSize = 12.sp) }
                         )
                     }
                 }
@@ -370,7 +368,7 @@ fun RecordDebtDialog(
                         FilterChip(
                             selected = kind == option,
                             onClick = { kindName = option.name },
-                            label = { Text(option.label, fontSize = 11.sp) }
+                            label = { Text(option.label, fontSize = 12.sp) }
                         )
                     }
                 }
@@ -382,7 +380,7 @@ fun RecordDebtDialog(
                 )
                 if (minorUnits != null && !valid) {
                     Text("Repayment exceeds the outstanding amount.",
-                        color = LedgerMuted, fontSize = 11.sp)
+                        color = LedgerMuted, fontSize = 12.sp)
                 }
                 OutlinedTextField(
                     value = note, onValueChange = { if (it.length <= 160) note = it },
