@@ -196,16 +196,20 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         return result
     }
 
-    fun addEntry(kind: EntryKind, description: String, minorUnits: Long, category: String = "Other"): Long {
+    fun addEntry(
+        kind: EntryKind, description: String, minorUnits: Long,
+        category: String = "Other", createdAt: Long = System.currentTimeMillis()
+    ): Long {
         val clean = description.trim()
         require(clean.isNotEmpty() && clean.length <= 80) { "Description must be 1–80 characters" }
         require(minorUnits > 0) { "Amount must be positive" }
         require(FinanceCategories.valid(category)) { "Invalid transaction category" }
+        validateEntryDate(createdAt)
         val values = ContentValues().apply {
             put("kind", kind.name)
             put("description", clean)
             put("minor_units", minorUnits)
-            put("created_at", System.currentTimeMillis())
+            put("created_at", createdAt)
             put("category", category)
         }
         val db = writableDatabase
@@ -219,21 +223,30 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
         }
     }
 
-    /** Update the entry in place, preserving its ID and original date. */
+    /** User-entered dates are stored as device-local timestamps. */
+    private fun validateEntryDate(date: Long) {
+        require(date >= 946684800000L && date <= System.currentTimeMillis()) {
+            "Transaction date must be between 2000-01-01 and today"
+        }
+    }
+
+    /** Update the entry in place, preserving its ID unless date is explicitly supplied. */
     fun updateEntry(
         id: Long, kind: EntryKind, description: String,
-        minorUnits: Long, category: String
+        minorUnits: Long, category: String, createdAt: Long? = null
     ): Boolean {
         val clean = description.trim()
         require(id > 0)
         require(clean.isNotEmpty() && clean.length <= 80)
         require(minorUnits > 0)
         require(FinanceCategories.valid(category))
+        if (createdAt != null) validateEntryDate(createdAt)
         val values = ContentValues().apply {
             put("kind", kind.name)
             put("description", clean)
             put("minor_units", minorUnits)
             put("category", category)
+            if (createdAt != null) put("created_at", createdAt)
         }
         return writableDatabase.update("entries", values, "id = ?", arrayOf(id.toString())) == 1
     }
