@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -144,6 +145,7 @@ private fun GaGaFinanceApp() {
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
+    var quickEntryKind by remember { mutableStateOf(EntryKind.EXPENSE) }
     var editingEntry by remember { mutableStateOf<FinanceEntry?>(null) }
     var showPersonAdd by remember { mutableStateOf(false) }
     var recordingPerson by remember { mutableStateOf<LedgerPerson?>(null) }
@@ -313,7 +315,7 @@ private fun GaGaFinanceApp() {
     }
 
     val destinations = listOf(
-        Destination("Home", Icons.Filled.Home),
+        Destination("Today", Icons.Filled.Home),
         Destination("Txn", Icons.Filled.ReceiptLong),
         Destination("People", Icons.Filled.People),
         Destination("Insights", Icons.Filled.AutoAwesome),
@@ -355,14 +357,39 @@ private fun GaGaFinanceApp() {
                     "Local data unavailable", loadError ?: "Please retry.", page,
                     action = { Button(onClick = { isLoading = true; reload() }) { Text("Retry") } }
                 )
-                selected == 0 -> HomePage(
-                    records, budgets, goals, page,
-                    onAdd = { editingEntry = null; showAdd = true },
-                    onView = { selected = 1 },
-                    onPlanning = { selected = 4; plannerOpen = true }
+                selected == 0 -> DailyHomePage(
+                    records = records, budgets = budgets, goals = goals,
+                    bills = bills, loans = loans, repayments = loanRepayments,
+                    modifier = page,
+                    onAddExpense = {
+                        editingEntry = null
+                        quickEntryKind = EntryKind.EXPENSE
+                        showAdd = true
+                    },
+                    onAddIncome = {
+                        editingEntry = null
+                        quickEntryKind = EntryKind.INCOME
+                        showAdd = true
+                    },
+                    onTransactions = { selected = 1 },
+                    onPeople = { selected = 2 },
+                    onBills = {
+                        selected = 4
+                        plannerOpen = false
+                        hubRoute = "obligations"
+                    },
+                    onPlanning = {
+                        selected = 4
+                        hubRoute = ""
+                        plannerOpen = true
+                    }
                 )
                 selected == 1 -> TransactionsPage(
-                    records, page, onAdd = { editingEntry = null; showAdd = true },
+                    records, page, onAdd = {
+                        editingEntry = null
+                        quickEntryKind = EntryKind.EXPENSE
+                        showAdd = true
+                    },
                     onEdit = { editingEntry = it; showAdd = true },
                     onDelete = { pendingDelete = it }
                 )
@@ -767,9 +794,10 @@ private fun GaGaFinanceApp() {
         if (showAdd) {
             AddTransactionDialog(
                 existing = editingEntry,
+                defaultKind = quickEntryKind,
                 saving = isSaving,
                 onDismiss = { if (!isSaving) showAdd = false },
-                onSave = { kind, description, minorUnits, category ->
+                onSave = { kind, description, minorUnits, category, dateMillis ->
                     if (!isSaving) {
                         isSaving = true
                         scope.launch {
@@ -777,9 +805,9 @@ private fun GaGaFinanceApp() {
                                 withContext(Dispatchers.IO) {
                                     val existing = editingEntry
                                     if (existing == null) {
-                                        store.addEntry(kind, description, minorUnits, category)
+                                        store.addEntry(kind, description, minorUnits, category, dateMillis)
                                     } else {
-                                        check(store.updateEntry(existing.id, kind, description, minorUnits, category)) {
+                                        check(store.updateEntry(existing.id, kind, description, minorUnits, category, dateMillis)) {
                                             "Entry no longer exists"
                                         }
                                     }
@@ -1004,12 +1032,9 @@ private fun TransactionsPage(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var typeFilter by rememberSaveable { mutableStateOf("All") }
-    val visible = remember(records, query, typeFilter) {
-        records.filter { entry ->
-            (typeFilter == "All" || entry.kind.name.equals(typeFilter, ignoreCase = true)) &&
-                (entry.description.contains(query.trim(), ignoreCase = true) ||
-                    entry.category.contains(query.trim(), ignoreCase = true))
-        }
+    var dateFilter by rememberSaveable { mutableStateOf(TransactionFilters.ALL) }
+    val visible = remember(records, query, typeFilter, dateFilter) {
+        TransactionFilters.apply(records, query, typeFilter, dateFilter)
     }
     LazyColumn(
         modifier.background(Navy),
@@ -1040,8 +1065,27 @@ private fun TransactionsPage(
                         )
                     }
                 }
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(TransactionFilters.ALL, TransactionFilters.MONTH,
+                        TransactionFilters.WEEK).forEach { option ->
+                        FilterChip(
+                            selected = dateFilter == option,
+                            onClick = { dateFilter = option },
+                            label = { Text(option) }
+                        )
+                    }
+                }
+                val filteredTotals = FinanceMath.totals(visible, Long.MIN_VALUE)
                 Text("Showing " + visible.size + " of " + records.size + " entries",
                     color = Muted, fontSize = 12.sp)
+                Text(
+                    "Income " + Money.formatBDT(filteredTotals.income) +
+                        "   •   Expenses " + Money.formatBDT(filteredTotals.expenses),
+                    color = Aqua, fontSize = 12.sp
+                )
             }
         }
         if (visible.isEmpty()) {
@@ -1102,11 +1146,12 @@ private fun EntryCard(
 
 @Composable
 private fun AddTransactionDialog(
-    existing: FinanceEntry?, saving: Boolean, onDismiss: () -> Unit,
-    onSave: (EntryKind, String, Long, String) -> Unit
+    existing: FinanceEntry?, defaultKind: EntryKind,
+    saving: Boolean, onDismiss: () -> Unit,
+    onSave: (EntryKind, String, Long, String, Long) -> Unit
 ) {
-    var kindName by rememberSaveable(existing?.id) {
-        mutableStateOf(existing?.kind?.name ?: EntryKind.EXPENSE.name)
+    var kindName by rememberSaveable(existing?.id, defaultKind) {
+        mutableStateOf(existing?.kind?.name ?: defaultKind.name)
     }
     var description by rememberSaveable(existing?.id) {
         mutableStateOf(existing?.description ?: "")
@@ -1117,16 +1162,30 @@ private fun AddTransactionDialog(
     var category by rememberSaveable(existing?.id) {
         mutableStateOf(existing?.category ?: "Other")
     }
+    var dateText by rememberSaveable(existing?.id) {
+        mutableStateOf(
+            FinanceDates.formatDate(existing?.createdAt ?: System.currentTimeMillis())
+        )
+    }
     var menuOpen by remember { mutableStateOf(false) }
     val minorUnits = Money.parseMinorUnits(amount)
+    val parsedDate = FinanceDates.parseDate(dateText)
+    val dateMillis = if (existing != null &&
+        dateText == FinanceDates.formatDate(existing.createdAt)
+    ) existing.createdAt else parsedDate
+    val validDate = dateMillis != null &&
+        dateMillis >= 946684800000L && dateMillis <= System.currentTimeMillis()
     val valid = description.trim().isNotEmpty() && description.trim().length <= 80 &&
-        minorUnits != null
+        minorUnits != null && validDate
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existing == null) "New transaction" else "Edit transaction") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text("Manual record only · BDT", color = Muted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
@@ -1152,6 +1211,15 @@ private fun AddTransactionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text("Positive amount, up to 2 decimal places") }
                 )
+                OutlinedTextField(
+                    value = dateText, onValueChange = { dateText = it.take(10) },
+                    label = { Text("Transaction date YYYY-MM-DD") },
+                    supportingText = {
+                        Text(if (validDate) "Record today or a past date"
+                            else "Enter a valid date between 2000-01-01 and today")
+                    },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
                 TextButton(onClick = { menuOpen = true }) { Text("Category: " + category) }
                 DropdownMenu(
                     expanded = menuOpen,
@@ -1169,8 +1237,10 @@ private fun AddTransactionDialog(
         confirmButton = {
             Button(
                 enabled = valid && !saving,
-                onClick = { if (minorUnits != null) onSave(EntryKind.valueOf(kindName),
-                    description.trim(), minorUnits, category) }
+                onClick = { if (minorUnits != null && dateMillis != null) {
+                    onSave(EntryKind.valueOf(kindName), description.trim(),
+                        minorUnits, category, dateMillis)
+                } }
             ) { Text(if (saving) "Saving…" else if (existing == null) "Save entry" else "Save changes") }
         },
         dismissButton = {
@@ -1210,7 +1280,7 @@ private fun MorePage(
                     Text("GaGa Finance", color = White,
                         fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     Text("Smart Finance Hub", color = Aqua, fontSize = 13.sp)
-                    Text("Version 0.5.0 · Offline preview", color = Muted, fontSize = 11.sp)
+                    Text("Version 0.6.0 · Offline preview", color = Muted, fontSize = 11.sp)
                 }
             }
         }
