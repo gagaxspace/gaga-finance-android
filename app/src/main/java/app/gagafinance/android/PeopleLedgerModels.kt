@@ -5,7 +5,11 @@ data class LedgerPerson(
     val id: Long,
     val name: String,
     val note: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val phone: String = "",
+    val email: String = "",
+    val address: String = "",
+    val relation: String = ""
 )
 
 enum class DebtEventKind(val label: String) {
@@ -75,4 +79,47 @@ object DebtMath {
                 activityCount = Math.addExact(sum.activityCount, balance.activityCount)
             )
         }
+}
+
+
+/** Gross activity and outstanding balances are displayed separately. */
+data class PeopleTotals(
+    val people: Int,
+    val active: Int,
+    val totalLent: Long,
+    val totalBorrowed: Long,
+    val receivedBack: Long,
+    val paidBack: Long,
+    val lentOutstanding: Long,
+    val borrowedOutstanding: Long
+) {
+    val netOutstanding: Long get() = Math.subtractExact(lentOutstanding, borrowedOutstanding)
+}
+
+object PeopleTotalsMath {
+    fun calculate(people: List<LedgerPerson>, events: List<DebtEvent>): PeopleTotals {
+        var totalLent = 0L
+        var totalBorrowed = 0L
+        var receivedBack = 0L
+        var paidBack = 0L
+        for (event in events) {
+            when (event.kind) {
+                DebtEventKind.LENT -> totalLent = Math.addExact(totalLent, event.minorUnits)
+                DebtEventKind.BORROWED -> totalBorrowed = Math.addExact(totalBorrowed, event.minorUnits)
+                DebtEventKind.REPAID_TO_ME -> receivedBack = Math.addExact(receivedBack, event.minorUnits)
+                DebtEventKind.I_REPAID -> paidBack = Math.addExact(paidBack, event.minorUnits)
+            }
+        }
+        val balanceByPerson = events.groupBy { it.personId }
+        val active = people.count {
+            val balance = DebtMath.balance(balanceByPerson[it.id].orEmpty())
+            balance.lentOutstanding > 0L || balance.borrowedOutstanding > 0L
+        }
+        val netLent = Math.subtractExact(totalLent, receivedBack)
+        val netBorrowed = Math.subtractExact(totalBorrowed, paidBack)
+        return PeopleTotals(
+            people.size, active, totalLent, totalBorrowed,
+            receivedBack, paidBack, netLent, netBorrowed
+        )
+    }
 }
