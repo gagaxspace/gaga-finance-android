@@ -392,7 +392,7 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
     }
 
     fun upsertBudget(category: String, limitMinorUnits: Long) {
-        require(FinanceCategories.valid(category))
+        require(FinanceCategories.valid(category) || category == "Overall")
         require(limitMinorUnits > 0L)
         val values = ContentValues().apply {
             put("category", category)
@@ -404,7 +404,7 @@ class LocalFinanceStore(context: Context) : SQLiteOpenHelper(
     }
 
     fun deleteBudget(category: String): Boolean {
-        require(FinanceCategories.valid(category))
+        require(FinanceCategories.valid(category) || category == "Overall")
         return writableDatabase.delete(
             "monthly_budgets", "category = ?", arrayOf(category)
         ) == 1
