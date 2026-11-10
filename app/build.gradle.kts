@@ -17,6 +17,20 @@ android {
         manifestPlaceholders["gagaAppLabel"] = "GaGa Finance"
     }
 
+    // A Play upload key is supplied only through private GitHub Actions secrets.
+    // It is never committed to Git or generated afresh by CI on each release.
+    signingConfigs {
+        create("playUpload") {
+            val keyFile = System.getenv("GAGA_FINANCE_UPLOAD_KEY_FILE")
+            if (!keyFile.isNullOrBlank()) {
+                storeFile = file(keyFile)
+                storePassword = System.getenv("GAGA_FINANCE_UPLOAD_STORE_PASSWORD")
+                keyAlias = System.getenv("GAGA_FINANCE_UPLOAD_KEY_ALIAS")
+                keyPassword = System.getenv("GAGA_FINANCE_UPLOAD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".preview07"
@@ -24,6 +38,9 @@ android {
             manifestPlaceholders["gagaAppLabel"] = "GaGa Finance Preview"
         }
         release {
+            if (!System.getenv("GAGA_FINANCE_UPLOAD_KEY_FILE").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("playUpload")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
