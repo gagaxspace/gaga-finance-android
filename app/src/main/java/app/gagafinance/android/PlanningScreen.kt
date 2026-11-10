@@ -41,7 +41,7 @@ import java.util.Locale
 private val ScreenBg = Color(0xFF0B1424)
 private val ScreenPanel = Color(0xFF142238)
 private val ScreenAqua = Color(0xFF35D6C5)
-private val ScreenMuted = Color(0xFFB7C5D7)
+private val ScreenMuted = Color(0xFFC9D6E4)
 private val ScreenText = Color(0xFFF4F7FB)
 private val ScreenWarning = Color(0xFFFFB4A9)
 
@@ -61,14 +61,14 @@ fun PlanningPage(
     var tab by rememberSaveable { mutableStateOf("Budgets") }
     LazyColumn(
         modifier.background(ScreenBg),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onBack) { Text("‹ More") }
                 Text("Budgets & Goals", color = ScreenText,
-                    fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                    fontSize = 23.sp, fontWeight = FontWeight.Bold)
                 Text("Private manual planning. No money is reserved or moved.",
                     color = ScreenMuted, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -87,7 +87,7 @@ fun PlanningPage(
         }
         if (tab == "Budgets") {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date()) +
                             " · recurring monthly limits",
@@ -125,7 +125,7 @@ fun PlanningPage(
             }
         } else {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onNewGoal) { Text("+ Create savings goal") }
                     Text("Goal progress is entered manually; this is not a wallet balance.",
                         color = ScreenMuted, fontSize = 12.sp)
@@ -160,9 +160,9 @@ private fun BudgetCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = ScreenPanel),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(14.dp)
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -209,9 +209,9 @@ private fun GoalCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = ScreenPanel),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(14.dp)
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Text(goal.name, color = ScreenText, fontWeight = FontWeight.Bold, fontSize = 17.sp)
             Text(
                 Money.formatBDT(goal.savedMinorUnits) + " recorded of " +
