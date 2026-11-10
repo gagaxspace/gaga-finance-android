@@ -14,12 +14,14 @@ android {
         targetSdk = 35
         versionCode = 4
         versionName = "0.4.0"
+        manifestPlaceholders["gagaAppLabel"] = "GaGa Finance"
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            applicationIdSuffix = ".preview04"
+            versionNameSuffix = "-preview"
+            manifestPlaceholders["gagaAppLabel"] = "GaGa Finance Preview"
         }
         release {
             isMinifyEnabled = false
