@@ -233,7 +233,7 @@ object LocalBackup {
             }
         }
         for ((id, saved) in goals) {
-            require(progress.getOrDefault(id, 0L) == saved) {
+            require((progress[id] ?: 0L) == saved) {
                 "Savings goal progress does not match its history"
             }
         }
