@@ -38,11 +38,13 @@ jobs:
       - name: Publish downloadable public PREVIEW release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: gaga-finance-0.4.0-preview.1
+          TAG: gaga-finance-0.5.0-branded-preview.1
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
-          gh release create "$TAG" "app/build/outputs/apk/debug/app-debug.apk#GaGaFinance-0.4.0-Preview.apk" \
+          cp app/build/outputs/apk/debug/app-debug.apk GaGaFinance-0.5.0-Branded-Preview.apk
+          sha256sum GaGaFinance-0.5.0-Branded-Preview.apk > SHA256SUMS.txt
+          gh release create "$TAG" GaGaFinance-0.5.0-Branded-Preview.apk SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
-            --title "GaGa Finance 0.4.0 — Android preview (offline testing only)" \
+            --title "GaGa Finance 0.5.0 — Branded Android preview (offline testing only)" \
             --prerelease \
-            --notes "Offline preview APK for manual bookkeeping, People Ledger, loans, budgets, bill tracking and local backups. NOT a bank or production finance service. This preview uses a separate package ID, starts with an empty local database, and does not connect to web account data. Do not enter banking credentials or sensitive identification data. Local data is not encrypted at rest. Do not rely on this build for real-money transfers."
+            --notes "Branded GaGa Finance G/growth logo, launcher and splash. Offline preview APK for manual bookkeeping, People Ledger, loans, budgets, bill tracking and local backups. NOT a bank or production finance service. This preview uses a separate package ID, starts with an empty local database, and does not connect to web account data. Do not enter banking credentials or sensitive identification data. Local data is not encrypted at rest. Do not rely on this build for real-money transfers."
