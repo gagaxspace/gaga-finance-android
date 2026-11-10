@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,9 +30,9 @@ import java.util.Locale
 
 private val HomeBg = Color(0xFF0B1424)
 private val HomePanel = Color(0xFF142238)
-private val HomeRaised = Color(0xFF1A2B43)
+private val HomeRaised = Color(0xFF1D3049)
 private val HomeAqua = Color(0xFF35D6C5)
-private val HomeMuted = Color(0xFFB7C5D7)
+private val HomeMuted = Color(0xFFC9D6E4)
 private val HomeWhite = Color(0xFFF4F7FB)
 private val HomeCoral = Color(0xFFFFB4A9)
 private val HomeAmber = Color(0xFFFFD38B)
@@ -53,29 +56,28 @@ fun DailyHomePage(
 ) {
     val now = System.currentTimeMillis()
     val focus = DailyFocusMath.calculate(records, budgets, goals, bills, loans, repayments, now)
-    val date = SimpleDateFormat("EEEE, d MMM yyyy", Locale.getDefault()).format(Date(now))
+    val date = SimpleDateFormat("EEE, d MMM yyyy", Locale.getDefault()).format(Date(now))
     Column(
         modifier.background(HomeBg).verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(15.dp)
+            .padding(horizontal = 16.dp, vertical = 11.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Today", color = HomeWhite, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+            Text("Today", color = HomeWhite, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text(date, color = HomeMuted, fontSize = 13.sp)
-            Text("Your day-to-day money organizer", color = HomeMuted, fontSize = 12.sp)
         }
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = HomePanel),
-            shape = RoundedCornerShape(18.dp)
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Text("THIS MONTH • NET CASHFLOW", color = HomeMuted, fontSize = 11.sp)
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("THIS MONTH • NET CASHFLOW", color = HomeMuted, fontSize = 12.sp)
                 Text(Money.formatBDT(focus.monthlyNet),
                     color = if (focus.monthlyNet >= 0L) HomeAqua else HomeCoral,
-                    fontSize = 29.sp, fontWeight = FontWeight.Bold)
+                    fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 Text("Income minus expenses from saved entries, not a bank balance",
-                    color = HomeMuted, fontSize = 11.sp)
+                    color = HomeMuted, fontSize = 12.sp)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(9.dp)
@@ -90,19 +92,19 @@ fun DailyHomePage(
         Text("Quick actions", color = HomeWhite,
             fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onAddExpense, modifier = Modifier.weight(1f)) {
-                Text("+ Expense", fontSize = 13.sp)
+            Button(onClick = onAddExpense, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Text("+ Expense", fontSize = 13.sp, maxLines = 1)
             }
-            OutlinedButton(onClick = onAddIncome, modifier = Modifier.weight(1f)) {
-                Text("+ Income", fontSize = 13.sp)
+            OutlinedButton(onClick = onAddIncome, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Text("+ Income", fontSize = 13.sp, maxLines = 1)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onBills, modifier = Modifier.weight(1f)) {
-                Text("Bills & loans", fontSize = 12.sp)
+            OutlinedButton(onClick = onBills, modifier = Modifier.weight(1f).heightIn(min = 46.dp)) {
+                Text("Bills & loans", fontSize = 13.sp)
             }
-            OutlinedButton(onClick = onPeople, modifier = Modifier.weight(1f)) {
-                Text("People", fontSize = 12.sp)
+            OutlinedButton(onClick = onPeople, modifier = Modifier.weight(1f).heightIn(min = 46.dp)) {
+                Text("People", fontSize = 13.sp)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -177,7 +179,7 @@ fun DailyHomePage(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = HomePanel)
         ) {
-            Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     budgets.size.toString() + " budget limits · " +
                         goals.size.toString() + " savings goals",
@@ -186,7 +188,7 @@ fun DailyHomePage(
                 Text(focus.goalsReached.toString() + " goals reached",
                     color = HomeAqua, fontSize = 12.sp)
                 Text("Goal progress is manual; no funds are held or transferred.",
-                    color = HomeMuted, fontSize = 11.sp)
+                    color = HomeMuted, fontSize = 12.sp)
             }
         }
 
@@ -224,7 +226,7 @@ fun DailyHomePage(
                             entry.category + " · " +
                                 SimpleDateFormat("d MMM yyyy", Locale.getDefault())
                                     .format(Date(entry.createdAt)),
-                            color = HomeMuted, fontSize = 11.sp
+                            color = HomeMuted, fontSize = 12.sp
                         )
                     }
                 }
@@ -233,20 +235,28 @@ fun DailyHomePage(
         Text(
             "Private offline tracker. Alerts are in-app only; no scheduled system " +
                 "notifications or bank feeds are active.",
-            color = HomeMuted, fontSize = 11.sp,
+            color = HomeMuted, fontSize = 12.sp,
             modifier = Modifier.padding(bottom = 10.dp)
         )
     }
 }
 
 @Composable
-private fun SmallStatistic(title: String, value: String, modifier: Modifier, tint: Color) {
-    Card(modifier = modifier,
+private fun SmallStatistic(title: String, value: String, modifier: Modifier = Modifier, color: Color) {
+    Card(
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = HomeRaised),
-        shape = RoundedCornerShape(14.dp)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text(title, color = HomeMuted, fontSize = 11.sp)
-            Text(value, color = tint, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text(title, color = HomeMuted, fontSize = 12.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            Text(value, color = color, fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -259,12 +269,23 @@ private fun FocusCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = HomePanel),
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(13.dp)
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(title, color = accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            Text(detail, color = HomeMuted, fontSize = 12.sp)
-            TextButton(onClick = onClick) { Text(actionLabel) }
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .padding(start = 13.dp, end = 5.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, color = accent, fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp, maxLines = 2)
+                Text(detail, color = HomeMuted, fontSize = 12.sp, maxLines = 2,
+                    overflow = TextOverflow.Ellipsis)
+            }
+            TextButton(onClick = onClick) {
+                Text(actionLabel, fontSize = 12.sp, maxLines = 1)
+            }
         }
     }
 }
