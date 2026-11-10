@@ -128,6 +128,10 @@ private fun GaGaFinanceApp() {
     var repayingLoan by remember { mutableStateOf<LoanContract?>(null) }
     var showBillAdd by remember { mutableStateOf(false) }
     var pendingBillDelete by remember { mutableStateOf<BillReminder?>(null) }
+    var importCandidate by remember { mutableStateOf<String?>(null) }
+    var importPreview by remember { mutableStateOf<BackupPreview?>(null) }
+    var confirmReset by remember { mutableStateOf(false) }
+    var resetPhrase by remember { mutableStateOf("") }
     var plannerOpen by rememberSaveable { mutableStateOf(false) }
     var budgetDialogOpen by remember { mutableStateOf(false) }
     var editingBudget by remember { mutableStateOf<MonthlyBudget?>(null) }
@@ -252,6 +256,59 @@ private fun GaGaFinanceApp() {
         }
     }
 
+    val jsonExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val backup = store.exportJson()
+                        val stream = context.contentResolver.openOutputStream(uri)
+                            ?: error("Cannot write chosen document")
+                        stream.bufferedWriter(Charsets.UTF_8).use { it.write(backup) }
+                    }
+                    snackbar.showSnackbar("Full local JSON backup exported. Store securely.")
+                } catch (_: Exception) {
+                    snackbar.showSnackbar("Backup export failed.")
+                }
+            }
+        }
+    }
+
+    val jsonImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val candidate = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            val output = java.io.ByteArrayOutputStream()
+                            val buffer = ByteArray(8192)
+                            while (true) {
+                                val n = stream.read(buffer)
+                                if (n < 0) break
+                                require(output.size() + n <= 8_000_000) {
+                                    "Backup too large"
+                                }
+                                output.write(buffer, 0, n)
+                            }
+                            output.toString(Charsets.UTF_8.name())
+                        } ?: error("Cannot read chosen file")
+                    }
+                    val preview = withContext(Dispatchers.Default) {
+                        store.previewImport(candidate)
+                    }
+                    importCandidate = candidate
+                    importPreview = preview
+                } catch (e: Exception) {
+                    snackbar.showSnackbar("Invalid backup: " + (e.message ?: "unsupported file"))
+                }
+            }
+        }
+    }
+
     val destinations = listOf(
         Destination("Home", Icons.Filled.Home),
         Destination("Txn", Icons.Filled.ReceiptLong),
@@ -351,11 +408,107 @@ private fun GaGaFinanceApp() {
                     },
                     onPlanning = { hubRoute = ""; plannerOpen = true },
                     onObligations = { plannerOpen = false; hubRoute = "obligations" },
+                    onExportJson = {
+                        jsonExportLauncher.launch("gaga-finance-complete-backup.json")
+                    },
+                    onImportJson = { jsonImportLauncher.launch(arrayOf("*/*")) },
+                    onResetAll = { resetPhrase = ""; confirmReset = true },
                     overdueBills = bills.count {
                         ObligationMath.billStatus(it, System.currentTimeMillis()) == "Overdue"
                     }
                 )
             }
+        }
+
+        importPreview?.let { preview ->
+            AlertDialog(
+                onDismissRequest = { if (!isSaving) {
+                    importPreview = null
+                    importCandidate = null
+                } },
+                title = { Text("Restore local backup?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "This will replace ALL local records with the chosen JSON backup. " +
+                                "It does not sync with the web app. Export your current data first."
+                        )
+                        Text(preview.total.toString() + " records in backup")
+                        Text(
+                            preview.recordCounts.entries.joinToString("\n") {
+                                it.key + ": " + it.value
+                            },
+                            color = Muted, fontSize = 12.sp
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(enabled = !isSaving, onClick = {
+                        val raw = importCandidate ?: return@Button
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { store.restoreJson(raw) }
+                                snackbar.showSnackbar("Backup restored successfully.")
+                                importPreview = null
+                                importCandidate = null
+                                reload()
+                            } catch (e: Exception) {
+                                snackbar.showSnackbar(
+                                    "Import rolled back: " + (e.message ?: "validation failed")
+                                )
+                            } finally { isSaving = false }
+                        }
+                    }) { Text(if (isSaving) "Restoring…" else "Replace and restore") }
+                },
+                dismissButton = {
+                    TextButton(enabled = !isSaving, onClick = {
+                        importPreview = null
+                        importCandidate = null
+                    }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (confirmReset) {
+            AlertDialog(
+                onDismissRequest = { if (!isSaving) confirmReset = false },
+                title = { Text("Permanently delete local records?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "All transactions, people, loans, bills, budgets and goals " +
+                                "will be erased from this device. This cannot be undone."
+                        )
+                        Text("Type RESET to confirm.")
+                        OutlinedTextField(
+                            value = resetPhrase, onValueChange = {
+                                resetPhrase = it.take(5)
+                            }, singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(enabled = !isSaving && resetPhrase == "RESET", onClick = {
+                        isSaving = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { store.clearAllRecords() }
+                                confirmReset = false
+                                resetPhrase = ""
+                                reload()
+                            } catch (_: Exception) {
+                                snackbar.showSnackbar("Could not reset local records.")
+                            } finally { isSaving = false }
+                        }
+                    }) { Text("Erase all", color = Coral) }
+                },
+                dismissButton = {
+                    TextButton(enabled = !isSaving, onClick = {
+                        confirmReset = false
+                    }) { Text("Cancel") }
+                }
+            )
         }
 
         editingPerson?.let { person ->
@@ -999,12 +1152,14 @@ private fun MorePage(
     count: Int, modifier: Modifier,
     onExport: () -> Unit, onExportPeople: () -> Unit,
     onExportPlanning: () -> Unit, onPlanning: () -> Unit,
-    onObligations: () -> Unit, overdueBills: Int
+    onObligations: () -> Unit, overdueBills: Int,
+    onExportJson: () -> Unit, onImportJson: () -> Unit,
+    onResetAll: () -> Unit
 ) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Header("More", "Data and account settings")
-        Text("Your records", color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Settings & data", color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text("You have " + count + " locally recorded transactions.", color = Muted)
         Button(onClick = onPlanning) { Text("Budgets & savings goals") }
         Button(onClick = onObligations) { Text("Loans & Borrow · Bill Reminders") }
@@ -1012,10 +1167,12 @@ private fun MorePage(
             Text(overdueBills.toString() + " overdue bill reminders",
                 color = Coral, fontSize = 12.sp)
         }
+        Button(onClick = onExportJson) { Text("Export ALL data to JSON") }
+        Button(onClick = onImportJson) { Text("Import a GaGa Finance JSON backup") }
         Button(onClick = onExport) { Text("Export transactions to CSV") }
         Button(onClick = onExportPeople) { Text("Export People Ledger to CSV") }
         Button(onClick = onExportPlanning) { Text("Export budgets & goals to CSV") }
-        Text("CSV files contain names and financial details. Store them securely.",
+        Text("Exported files include personal and financial details in plaintext. Store securely.",
             color = Muted, fontSize = 12.sp)
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -1028,6 +1185,7 @@ private fun MorePage(
                     color = Muted)
             }
         }
+        TextButton(onClick = onResetAll) { Text("Reset everything on this device", color = Coral) }
     }
 }
 
