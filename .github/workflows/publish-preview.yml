@@ -42,13 +42,13 @@ jobs:
       - name: Publish downloadable public PREVIEW release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: gaga-finance-0.8.0-ui-refresh-preview.1
+          TAG: gaga-finance-0.8.0-ui-refresh-preview.2
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
           cp app/build/outputs/apk/debug/app-debug.apk GaGaFinance-0.8.0-UI-Refresh-Preview.apk
           sha256sum GaGaFinance-0.8.0-UI-Refresh-Preview.apk > SHA256SUMS.txt
           gh release create "$TAG" GaGaFinance-0.8.0-UI-Refresh-Preview.apk SHA256SUMS.txt \
             --target "$GITHUB_SHA" \
-            --title "GaGa Finance 0.8.0 — Compact UI Android preview (offline testing only)" \
+            --title "GaGa Finance 0.8.0 — Safe Insets & Compact UI Android preview 2 (offline testing only)" \
             --prerelease \
             --notes "GaGa Finance UI refresh for user-shared Android screenshots: Android 16 safe-area/notch correction, compact branded top header, accessible 58dp bottom navigation, shorter cards and consistent text contrast/spacing across Today, People, Insights, Loans, Budgets and More. Offline bookkeeping and opt-in daily reminders preserved. PREVIEW ONLY: new preview08 test package has separate empty database; no automatic data migration or production signing. Real device screen QA is still required, and database is not independently encrypted."
