@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -67,6 +69,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -320,13 +323,20 @@ private fun GaGaFinanceApp() {
     MaterialTheme(colorScheme = FinanceTheme) {
         Scaffold(
             containerColor = Navy,
+            topBar = { GaGaFinanceBrandBar() },
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
                 NavigationBar(containerColor = Panel) {
                     destinations.forEachIndexed { index, destination ->
                         NavigationBarItem(
                             selected = selected == index,
-                            onClick = { selected = index },
+                            onClick = {
+                                if (selected != index || index == 4) {
+                                    hubRoute = ""
+                                    plannerOpen = false
+                                }
+                                selected = index
+                            },
                             icon = { Icon(destination.icon, contentDescription = null) },
                             label = { Text(destination.label) },
                             alwaysShowLabel = true
@@ -887,7 +897,7 @@ private fun HomePage(
             .padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Header("GaGa Finance", "Private, device-only bookkeeping")
+        // Shared GaGa brand bar appears on every screen.
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Your money overview", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
             Text("This month's manually recorded cashflow", color = Muted, fontSize = 13.sp)
@@ -951,16 +961,26 @@ private fun HomePage(
 }
 
 @Composable
-private fun Header(title: String, subtitle: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
-        Column {
-            Text(title, color = Aqua, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(subtitle, color = Muted, fontSize = 12.sp)
-        }
-        Surface(color = PanelSoft, shape = RoundedCornerShape(50)) {
-            Text("G", color = Aqua, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp))
+private fun GaGaFinanceBrandBar() {
+    Surface(color = Panel) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(R.drawable.gaga_brand_icon),
+                contentDescription = "GaGa Finance logo",
+                modifier = Modifier.size(42.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text("GaGa Finance", color = White, fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold)
+                Text("Smart Finance Hub · Offline", color = Muted, fontSize = 11.sp)
+            }
+            Text("PREVIEW", color = Aqua,
+                fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
         }
     }
 }
@@ -998,7 +1018,7 @@ private fun TransactionsPage(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Header("Transactions", "Manual entries saved on this device")
+                // Shared GaGa brand bar appears on every screen.
                 Text("Activity", color = White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
                 Button(onClick = onAdd) {
                     Icon(Icons.Filled.Add, contentDescription = null)
@@ -1171,7 +1191,29 @@ private fun MorePage(
 ) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Header("More", "Data and account settings")
+        // Shared GaGa brand bar appears on every screen.
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Panel),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.gaga_brand_icon),
+                    contentDescription = "GaGa Finance logo",
+                    modifier = Modifier.size(60.dp)
+                )
+                Column {
+                    Text("GaGa Finance", color = White,
+                        fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text("Smart Finance Hub", color = Aqua, fontSize = 13.sp)
+                    Text("Version 0.5.0 · Offline preview", color = Muted, fontSize = 11.sp)
+                }
+            }
+        }
         Text("Settings & data", color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text("You have " + count + " locally recorded transactions.", color = Muted)
         Button(onClick = onPlanning) { Text("Budgets & savings goals") }
@@ -1193,11 +1235,11 @@ private fun MorePage(
         Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("Privacy and limitations", color = White, fontWeight = FontWeight.Bold)
-                Text("Entries are stored privately on this device. There is no login, sync, backup, or account recovery.",
+                Text("Records stay on this device. No login, automatic cloud sync, or account recovery. Manual JSON backup/restore is available.",
                     color = Muted)
-                Text("Removing the app or clearing its data can permanently delete entries. Export a CSV to keep a copy.",
+                Text("Uninstalling or clearing app data can erase records. Export a compatible JSON backup first; CSV files cannot be imported.",
                     color = Muted)
-                Text("No bank account, wallet balance, payment service, or AI provider is connected.",
+                Text("No bank, wallet, payment service, or cloud AI is connected. Local data is not encrypted at rest.",
                     color = Muted)
             }
         }
