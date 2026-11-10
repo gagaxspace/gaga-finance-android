@@ -369,6 +369,15 @@ private fun GaGaFinanceApp() {
                     modifier = page,
                     onManageBudgets = { selected = 4; plannerOpen = true }
                 )
+                selected == 4 && hubRoute == "guide" -> FinanceGuidePage(
+                    modifier = page, onBack = { hubRoute = "" }
+                )
+                selected == 4 && hubRoute == "markets" -> IntegrationStatusPage(
+                    type = "markets", modifier = page, onBack = { hubRoute = "" }
+                )
+                selected == 4 && hubRoute == "banking" -> IntegrationStatusPage(
+                    type = "banking", modifier = page, onBack = { hubRoute = "" }
+                )
                 selected == 4 && hubRoute == "obligations" -> ObligationsPage(
                     people = people, loans = loans, repayments = loanRepayments,
                     bills = bills, modifier = page,
@@ -408,6 +417,9 @@ private fun GaGaFinanceApp() {
                     },
                     onPlanning = { hubRoute = ""; plannerOpen = true },
                     onObligations = { plannerOpen = false; hubRoute = "obligations" },
+                    onGuide = { plannerOpen = false; hubRoute = "guide" },
+                    onMarkets = { plannerOpen = false; hubRoute = "markets" },
+                    onBanking = { plannerOpen = false; hubRoute = "banking" },
                     onExportJson = {
                         jsonExportLauncher.launch("gaga-finance-complete-backup.json")
                     },
@@ -1154,7 +1166,8 @@ private fun MorePage(
     onExportPlanning: () -> Unit, onPlanning: () -> Unit,
     onObligations: () -> Unit, overdueBills: Int,
     onExportJson: () -> Unit, onImportJson: () -> Unit,
-    onResetAll: () -> Unit
+    onResetAll: () -> Unit,
+    onGuide: () -> Unit, onMarkets: () -> Unit, onBanking: () -> Unit
 ) {
     Column(modifier.background(Navy).verticalScroll(rememberScrollState())
         .padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1163,6 +1176,9 @@ private fun MorePage(
         Text("You have " + count + " locally recorded transactions.", color = Muted)
         Button(onClick = onPlanning) { Text("Budgets & savings goals") }
         Button(onClick = onObligations) { Text("Loans & Borrow · Bill Reminders") }
+        Button(onClick = onMarkets) { Text("Markets & Portfolio · Not connected") }
+        Button(onClick = onBanking) { Text("Mobile Banking · Not connected") }
+        Button(onClick = onGuide) { Text("Instructions & Safety Guide") }
         if (overdueBills > 0) {
             Text(overdueBills.toString() + " overdue bill reminders",
                 color = Coral, fontSize = 12.sp)
